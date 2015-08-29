@@ -1,0 +1,6 @@
+mypy-lang==0.2.0
+pylint==1.4.4
+pytz==2015.4
+setproctitle==1.1.9
+tornado==4.2.1
+yappi==0.94

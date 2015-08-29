@@ -1,0 +1,2 @@
+RFC1459:
+  2.2.: ignoring equivalence between {}| and []\
