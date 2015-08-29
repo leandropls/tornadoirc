@@ -26,6 +26,7 @@ class IrcServer(TCPServer):
                 try:
                     data = yield stream.read_until(b'\n', max_bytes = 512)
                 except StreamClosedError:
+                    logger.info('Connection from %s closed.', address[0])
                     return
                 data = data.decode('utf-8', 'ignore')
 
@@ -40,5 +41,6 @@ class IrcServer(TCPServer):
                 params = params.split(':', maxsplit = 1)[1].rstrip()
                 
                 logger.info('%s, %s, %s', prefix, command, params)
-            except:
+            except Exception as e:
+                logger.info('IOStream read loop failed: %s', str(e))
                 return
