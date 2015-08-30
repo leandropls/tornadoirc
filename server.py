@@ -8,6 +8,7 @@ from servers.irc import IrcServer
 from setproctitle import setproctitle # pylint: disable=no-name-in-module
 from tornado.options import define, options
 from tornado.ioloop import IOLoop
+from tornado import autoreload
 
 def main() -> None:
     '''Runs server'''
@@ -33,6 +34,9 @@ def main() -> None:
     if settings.profiling:
         import yappi
         yappi.start()
+
+    # Setup autoreload
+    autoreload.start()
 
     # Run application
     IOLoop.instance().start()
