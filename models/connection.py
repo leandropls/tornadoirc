@@ -28,6 +28,8 @@ class Connection(object):
         self.server = server
         self.password = None
         self.user = None
+        self.req_user = None
+        self.req_nick = None
 
     def send_message(self, msgid: str, msgfrom: Optional[str] = None,
                      msgto: Optional[str] = None, **params):
@@ -77,20 +79,30 @@ class Connection(object):
         '''Process NICK command.'''
         if not nick:
             raise NoNicknameGivenError()
-        self.user = User(nick = nick, server = self.server,
-                         connection = self, hopcount = 0)
-        self.server.users[self.user.nick] = self.user
+        self.req_nick = nick
+        self.register_user()
 
     def cmd_user(self, prefix: Optional[str], username: str, hostname: str,
                  servername: str, realname: str):
-        '''Process USER command.'''
-        if not self.user:
+        self.req_user = {'username': username, 'hostname': hostname,
+                         'servername': servername, 'realname': realname}
+        self.register_user()
+
+    def register_user(self):
+        if not self.req_nick or not self.req_user:
             return
 
-        if self.user.registered:
+        if self.user and self.user.registered:
             raise AlreadyRegisteredError()
 
-        self.user.register(username = '~' + username,
+        self.user = User(nick = self.req_nick, server = self.server,
+                         connection = self, hopcount = 0)
+
+        self.user.register(username = '~' + self.req_user['username'],
                            hostname = self.address,
-                           servername = 'not-implemented',
-                           realname = realname)
+                           servername = self.server.name,
+                           realname = self.req_user['realname'])
+        self.server.users[self.user.nick] = self.user
+
+    def closed(self):
+        del self.server.users[self.user.nick]
