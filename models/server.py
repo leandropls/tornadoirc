@@ -11,7 +11,9 @@ class Server(object):
     version = 'tornadoirc-0.0'
     usermodes = ''
     channelmodes = ''
+    users = Undefined(dict)
 
     def __init__(self, name: str, date: str = str(datetime.now(localtime))):
         self.name = name
         self.date = date
+        self.users = {}
