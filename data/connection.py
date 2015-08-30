@@ -35,13 +35,18 @@ class Connection(object):
         self.stream.write(message)
 
     def on_read(self, prefix: str, command: str, params: List[str]):
-        # Check if method exists
+        # Created method name
         methodname = 'cmd_%s' % command
-        if not hasattr(self, methodname):
-            return
 
-        # Fetch method
-        method = getattr(self, methodname)
+        # Check if method exists and fetch it if it does
+        if self.user and self.user.registered:
+            if not hasattr(self.user, methodname):
+                return
+            method = getattr(self.user, methodname)
+        else:
+            if not hasattr(self, methodname):
+                return
+            method = getattr(self, methodname)
 
         # Check method args
         args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
