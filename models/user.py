@@ -1,5 +1,7 @@
 # coding: utf-8
 
+from models.server import Server
+
 from typing import Undefined, Optional
 import logging
 
@@ -13,15 +15,18 @@ class User(object):
     servername = Undefined(Optional[str])
     realname = Undefined(Optional[str])
     connection = Undefined('Connection')
+    server = Undefined(Server)
     registered = Undefined(bool)
 
-    def __init__(self, nick: str, connection: 'Connection', hopcount: int):
+    def __init__(self, nick: str, connection: 'Connection', server: Server,
+                 hopcount: int):
         self.nick = nick
         self.hopcount = hopcount
         self.hostname = None
         self.servername = None
         self.realname = None
         self.connection = connection
+        self.server = server
         self.registered = False
 
     def register(self, username: str, hostname: str, servername: str,
@@ -41,24 +46,24 @@ class User(object):
                           hostname = self.hostname)
 
         self.send_message('RPL_YOURHOST',
-                          servername = self.connection.server.name,
-                          version = self.connection.server.version)
+                          servername = self.server.name,
+                          version = self.server.version)
 
         self.send_message('RPL_CREATED',
-                          date = self.connection.server.date)
+                          date = self.server.date)
 
         self.send_message('RPL_MYINFO',
-                          servername = self.connection.server.name,
-                          date = self.connection.server.date,
-                          version = self.connection.server.version,
-                          usermodes = self.connection.server.usermodes,
-                          channelmodes = self.connection.server.channelmodes)
+                          servername = self.server.name,
+                          date = self.server.date,
+                          version = self.server.version,
+                          usermodes = self.server.usermodes,
+                          channelmodes = self.server.channelmodes)
 
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
 
     def send_message(self, *args, **kwargs):
         self.connection.send_message(*args,
-                                     msgfrom = self.connection.server.name,
+                                     msgfrom = self.server.name,
                                      msgto = self.nick,
                                      **kwargs)
