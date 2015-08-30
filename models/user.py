@@ -2,7 +2,6 @@
 
 from models.server import Server
 from models.exceptions import *
-import settings
 
 from tornado.ioloop import PeriodicCallback
 
@@ -37,7 +36,7 @@ class User(object):
             raise ErroneousNicknameError(value)
         value = match.groups()[0]
 
-        nicklen = settings.user['nicklen']
+        nicklen = self.server.settings['nicklen']
         value = value[0 : min(len(value), nicklen)]
 
         if value in self.server.users:
@@ -106,10 +105,10 @@ class User(object):
 
     def cmd_motd(self, prefix: Optional[str], target: Optional[str] = None):
         '''Process MOTD command.'''
-        if not settings.ircd['motd']:
+        if not self.server.settings['motd']:
             raise NoMotdError()
         self.send_message('RPL_MOTDSTART', servername = self.server.name)
-        for text in settings.ircd['motd']:
+        for text in self.server.settings['motd']:
             self.send_message('RPL_MOTD', text = text)
         self.send_message('RPL_ENDOFMOTD')
 
