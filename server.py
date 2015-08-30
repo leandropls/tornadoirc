@@ -26,7 +26,7 @@ def main() -> None:
         setproctitle(pname)
 
     # Register IRC server
-    server = IrcServer()
+    server = IrcServer(servername = ircd['servername'])
     for address, port in ircd['listen']:
         server.listen(port, address = address)
 
