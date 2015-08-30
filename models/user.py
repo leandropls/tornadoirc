@@ -4,6 +4,8 @@ from models.server import Server
 from models.exceptions import *
 import settings
 
+from tornado.ioloop import PeriodicCallback
+
 from typing import Undefined, Optional
 import logging
 import re
@@ -86,15 +88,21 @@ class User(object):
 
         self.cmd_motd(None)
 
+        self.pingtimer = PeriodicCallback(self.send_ping, int(60e3))
+        self.pingtimer.start()
+
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
 
     def send_message(self, *args, **kwargs):
         '''Send message to user.'''
-        self.connection.send_message(*args,
-                                     msgfrom = self.server.name,
-                                     msgto = self.nick,
-                                     **kwargs)
+        self.connection.send_message(*args, **kwargs)
+
+    def send_ping(self):
+        '''Send PING to user'''
+        message = 'PING :%s\r\n' % self.server.name
+        message = message.encode('utf-8')
+        self.connection.stream.write(message)
 
     def cmd_motd(self, prefix: Optional[str], target: Optional[str] = None):
         '''Process MOTD command.'''
