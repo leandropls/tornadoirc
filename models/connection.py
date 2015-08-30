@@ -96,12 +96,11 @@ class Connection(object):
             raise AlreadyRegisteredError()
 
         self.user = User(nick = self.req_nick, server = self.server,
-                         connection = self, hopcount = 0)
-
-        self.user.register(username = '~' + self.req_user['username'],
-                           hostname = self.address,
-                           servername = self.server.name,
-                           realname = self.req_user['realname'])
+                         connection = self, hopcount = 0,
+                         username = '~' + self.req_user['username'],
+                         hostname = self.address,
+                         servername = self.server.name,
+                         realname = self.req_user['realname'])
         self.server.users[self.user.nick] = self.user
 
     def closed(self):
