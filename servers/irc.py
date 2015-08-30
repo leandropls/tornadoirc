@@ -1,7 +1,6 @@
 # coding: utf-8
 
 from models.connection import Connection
-from models.server import Server
 
 from tornado.tcpserver import TCPServer
 from tornado import gen
@@ -13,23 +12,43 @@ import re
 
 logger = logging.getLogger('tornado.general')
 
-class IrcServer(TCPServer):
-    ircserver = Undefined(Server)
+__all__ = ['IRCServer']
 
-    def __init__(self, servername, *args, **kwargs):
+class IRCServer(object):
+    tcpserver = Undefined('IRCTCPServer')
+    name = Undefined(str)
+    date = Undefined(str)
+    version = 'tornadoirc-0.0'
+    usermodes = ''
+    channelmodes = ''
+    users = Undefined(dict)
+
+    def __init__(self, settings):
+        self.tcpserver = IRCTCPServer(self)
+        self.settings = settings
+        self.name = settings['name']
+        self.date = settings['date']
+        self.users = {}
+
+    def listen(self, *args, **kwargs):
+        '''Listen to address and port.'''
+        self.tcpserver.listen(*args, **kwargs)
+
+class IRCTCPServer(TCPServer):
+    ircserver = None
+
+    def __init__(self, ircserver, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ircserver = Server(servername)
+        self.ircserver = ircserver
 
-    regex = {
-        'message': re.compile(
-            r'(?P<prefix>:\S+)?'
-            r'[ ]*'
-            r'(?P<command>[a-zA-Z]+|[0-9]{3})'
-            r'[ ]*'
-            r'(?P<params>[\S: ]+)?'
-            r'\r?\n'
-        )
-    }
+    message_regex = re.compile(
+        r'(?P<prefix>:\S+)?'
+        r'[ ]*'
+        r'(?P<command>[a-zA-Z]+|[0-9]{3})'
+        r'[ ]*'
+        r'(?P<params>[\S: ]+)?'
+        r'\r?\n'
+    )
 
     @gen.coroutine
     def handle_stream(self, stream, address):
@@ -44,12 +63,13 @@ class IrcServer(TCPServer):
                 try:
                     data = yield stream.read_until(b'\n', max_bytes = 512)
                 except StreamClosedError:
+                    connection.closed()
                     logger.info('Connection from %s closed.', address[0])
                     return
                 data = data.decode('utf-8', 'ignore')
 
                 # Parse message
-                match = self.regex['message'].match(data)
+                match = self.message_regex.match(data)
                 if not match:
                     continue
 
