@@ -1,17 +1,25 @@
 # coding: utf-8
 
 from data.connection import Connection
+from data.server import Server
 
 from tornado.tcpserver import TCPServer
 from tornado import gen
 from tornado.iostream import StreamClosedError
 
+from typing import Undefined
 import logging
 import re
 
 logger = logging.getLogger('tornado.general')
 
 class IrcServer(TCPServer):
+    ircserver = Undefined(Server)
+
+    def __init__(self, servername, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ircserver = Server(servername)
+
     regex = {
         'message': re.compile(
             r'(?P<prefix>:\S+)?'
@@ -27,7 +35,8 @@ class IrcServer(TCPServer):
     def handle_stream(self, stream, address):
         connection = Connection(stream = stream,
                                 address = address[0],
-                                port = address[1])
+                                port = address[1],
+                                server = self.ircserver)
         logger.info('Connection from %s', address[0])
         while True:
             try:
