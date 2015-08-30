@@ -2,6 +2,7 @@
 
 from models.user import User
 from models.messages import messages
+from models.exceptions import *
 
 from tornado.iostream import IOStream
 
@@ -15,7 +16,7 @@ class Connection(object):
     stream = Undefined(IOStream)
     address = Undefined(str)
     port = Undefined(int)
-    server = Undefined('server')
+    server = Undefined('Server')
     password = Undefined(Optional[str])
     user = Undefined(Optional[User])
 
@@ -28,61 +29,66 @@ class Connection(object):
         self.password = None
         self.user = None
 
-    def send_message(self, msgid: str, **params):
+    def send_message(self, msgid: str, msgfrom: Optional[str] = None,
+                     msgto: Optional[str] = None, **params):
+        '''Send message to connection.'''
+        if msgfrom == None:
+            msgfrom = self.server.name
+        if msgto == None:
+            msgto = self.user.nick if self.user else '*'
+        params.update(msgfrom = msgfrom, msgto = msgto)
         message = ':%(msgfrom)s ' + messages[msgid][0] + ' %(msgto)s ' + messages[msgid][1] + '\r\n'
         message = message % params
         message = message.encode('utf-8')
         self.stream.write(message)
 
     def on_read(self, prefix: str, command: str, params: List[str]):
+        '''Process message received from connection.'''
         # Created method name
         methodname = 'cmd_%s' % command
 
         # Check if method exists and fetch it if it does
+        method = None
         if self.user and self.user.registered:
-            if not hasattr(self.user, methodname):
-                return
-            method = getattr(self.user, methodname)
-        else:
+            if hasattr(self.user, methodname):
+                method = getattr(self.user, methodname)
+        if not method:
             if not hasattr(self, methodname):
                 return
             method = getattr(self, methodname)
 
-        # Check method args
-        args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
-        argnum = len(args) if args else 0
-        defnum = len(defaults) if defaults else 0
+        # Process command
+        try:
+            # Check method args
+            args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
+            argnum = len(args) if args else 0
+            defnum = len(defaults) if defaults else 0
 
-        # Check if we have enough parameters to call method
-        if len(params) < argnum - defnum - 2:
-            self.send_message('ERR_NEEDMOREPARAMS',
-                              msgfrom = self.server.name,
-                              msgto = self.user.nick if self.user else '',
-                              command = command)
-            return
+            # Check if we have enough parameters to call method
+            if len(params) < argnum - defnum - 2:
+                raise NeedMoreParamsError(command = command.upper())
 
-        # Call method
-        method(prefix, *params[0:argnum - 2])
+            # Call method
+            method(prefix, *params[0 : argnum - 2])
+        except CommandError as e:
+            self.send_message(msgid = e.msgid, **e.msgparams)
 
     def cmd_nick(self, prefix: Optional[str], nick: Optional[str] = None):
+        '''Process NICK command.'''
         if not nick:
-            self.send_message('ERR_NONICKNAMEGIVEN',
-                              msgfrom = self.server.name,
-                              msgto = '')
-            return
+            raise NoNicknameGivenError()
         self.user = User(nick = nick, server = self.server,
                          connection = self, hopcount = 0)
+        self.server.users[self.user.nick] = self.user
 
     def cmd_user(self, prefix: Optional[str], username: str, hostname: str,
                  servername: str, realname: str):
+        '''Process USER command.'''
         if not self.user:
             return
 
         if self.user.registered:
-            self.send_message('ERR_ALREADYREGISTRED',
-                              msgfrom = self.server.name,
-                              msgto = self.user.nick)
-            return
+            raise AlreadyRegisteredError()
 
         self.user.register(username = '~' + username,
                            hostname = self.address,
