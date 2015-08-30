@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from data.user import User
+from data.messages import messages
 
 from tornado.iostream import IOStream
 
@@ -14,17 +15,22 @@ class Connection(object):
     stream = Undefined(IOStream)
     address = Undefined(str)
     port = Undefined(int)
+    server = Undefined('server')
     password = Undefined(Optional[str])
     user = Undefined(Optional[User])
 
-    def __init__(self, stream: IOStream, address: str, port: int):
+    def __init__(self, stream: IOStream, server: 'Server',
+                 address: str, port: int):
         self.stream = stream
         self.address = address
         self.port = port
+        self.server = server
         self.password = None
         self.user = None
 
-    def write(self, message):
+    def send_message(self, msgid: str, **params):
+        message = ':%(msgfrom)s ' + messages[msgid][0] + ' %(msgto)s :' + messages[msgid][1] + '\r\n'
+        message = message % params
         message = message.encode('utf-8')
         self.stream.write(message)
 
@@ -52,12 +58,15 @@ class Connection(object):
     def cmd_nick(self, prefix: Optional[str], nick: Optional[str] = None):
         if not nick:
             return # ERR_NONICKNAMEGIVEN
-        self.user = User(nick = nick, hopcount = 0)
+        self.user = User(nick = nick, connection = self, hopcount = 0)
 
     def cmd_user(self, prefix: Optional[str], username: str, hostname: str,
                  servername: str, realname: str):
-        if not self.user or self.user.registered:
+        if not self.user:
             return
+
+        if self.user.registered:
+            return # ERR_ALREADYREGISTRED
 
         self.user.register(username = '~' + username,
                            hostname = self.address,
