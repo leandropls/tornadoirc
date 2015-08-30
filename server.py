@@ -2,8 +2,8 @@
 # coding: utf-8
 
 import settings
-from settings import ircd
-from servers.irc import IrcServer
+from settings import ircd as ircdsettings
+from servers.irc import IRCServer
 
 from setproctitle import setproctitle # pylint: disable=no-name-in-module
 from tornado.options import define, options
@@ -26,8 +26,8 @@ def main() -> None:
         setproctitle(pname)
 
     # Register IRC server
-    server = IrcServer(servername = ircd['servername'])
-    for address, port in ircd['listen']:
+    server = IRCServer(settings = ircdsettings)
+    for address, port in ircdsettings['listen']:
         server.listen(port, address = address)
 
     # Start profiling
