@@ -10,8 +10,19 @@ process_name = 'tornadoircd'
 ##
 ircd = {
     'servername': 'irc.testnetwork.org',
-    'listen': [('127.0.0.1', 6667)]
+    'listen': [('127.0.0.1', 6667)],
+    'motd': ['Welcome to my humble server!',
+             'This server is a test version of tornadoirc',
+             'If you find any issues, please report to the developer.'],
 }
+
+##
+# User
+##
+user = {
+    'nicklen': 30,
+}
+
 
 ##
 # Local time
