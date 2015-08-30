@@ -45,21 +45,12 @@ class User(object):
         self._nick = value
 
     def __init__(self, nick: str, connection: 'Connection', server: Server,
-                 hopcount: int):
+                 hopcount: int, username: str, hostname: str, servername: str,
+                 realname: str):
         self.connection = connection
         self.server = server
         self.nick = nick
         self.hopcount = hopcount
-        self.hostname = None
-        self.servername = None
-        self.realname = None
-        self.registered = False
-
-    def register(self, username: str, hostname: str, servername: str,
-                 realname: str):
-        if self.registered:
-            return
-
         self.username = username
         self.hostname = hostname
         self.servername = servername
