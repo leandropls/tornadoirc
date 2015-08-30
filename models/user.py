@@ -1,14 +1,17 @@
 # coding: utf-8
 
 from models.server import Server
+from models.exceptions import *
+import settings
 
 from typing import Undefined, Optional
 import logging
+import re
 
 logger = logging.getLogger('tornado.general')
 
 class User(object):
-    nick = Undefined(str)
+    _nick = Undefined(Optional[str])
     hopcount = Undefined(int)
     username = Undefined(Optional[str])
     hostname = Undefined(Optional[str])
@@ -18,15 +21,37 @@ class User(object):
     server = Undefined(Server)
     registered = Undefined(bool)
 
+    _nick_regex = re.compile(r'(\w+)')
+
+    @property
+    def nick(self):
+        return self._nick
+
+    @nick.setter
+    def nick(self, value):
+        '''Validate and set nick value.'''
+        match = self._nick_regex.match(value)
+        if not match:
+            raise ErroneousNicknameError(value)
+        value = match.groups()[0]
+
+        nicklen = settings.user['nicklen']
+        value = value[0 : min(len(value), nicklen)]
+
+        if value in self.server.users:
+            raise NicknameInUseError(value)
+
+        self._nick = value
+
     def __init__(self, nick: str, connection: 'Connection', server: Server,
                  hopcount: int):
+        self.connection = connection
+        self.server = server
         self.nick = nick
         self.hopcount = hopcount
         self.hostname = None
         self.servername = None
         self.realname = None
-        self.connection = connection
-        self.server = server
         self.registered = False
 
     def register(self, username: str, hostname: str, servername: str,
@@ -59,11 +84,22 @@ class User(object):
                           usermodes = self.server.usermodes,
                           channelmodes = self.server.channelmodes)
 
+        self.cmd_motd(None)
+
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
 
     def send_message(self, *args, **kwargs):
+        '''Send message to user.'''
         self.connection.send_message(*args,
                                      msgfrom = self.server.name,
                                      msgto = self.nick,
                                      **kwargs)
+
+    def cmd_motd(self, prefix: Optional[str], target: Optional[str] = None):
+        if not settings.ircd['motd']:
+            raise NoMotdError()
+        self.send_message('RPL_MOTDSTART', servername = self.server.name)
+        for text in settings.ircd['motd']:
+            self.send_message('RPL_MOTD', text = text)
+        self.send_message('RPL_ENDOFMOTD')
