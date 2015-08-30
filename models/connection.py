@@ -70,7 +70,8 @@ class Connection(object):
                               msgfrom = self.server.name,
                               msgto = '')
             return
-        self.user = User(nick = nick, connection = self, hopcount = 0)
+        self.user = User(nick = nick, server = self.server,
+                         connection = self, hopcount = 0)
 
     def cmd_user(self, prefix: Optional[str], username: str, hostname: str,
                  servername: str, realname: str):
