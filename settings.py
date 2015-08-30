@@ -9,6 +9,7 @@ process_name = 'tornadoircd'
 # IRCd
 ##
 ircd = {
+    'servername': 'irc.testnetwork.org',
     'listen': [('127.0.0.1', 6667)]
 }
 
