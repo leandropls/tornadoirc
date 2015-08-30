@@ -29,7 +29,7 @@ class Connection(object):
         self.user = None
 
     def send_message(self, msgid: str, **params):
-        message = ':%(msgfrom)s ' + messages[msgid][0] + ' %(msgto)s :' + messages[msgid][1] + '\r\n'
+        message = ':%(msgfrom)s ' + messages[msgid][0] + ' %(msgto)s ' + messages[msgid][1] + '\r\n'
         message = message % params
         message = message.encode('utf-8')
         self.stream.write(message)
@@ -50,14 +50,21 @@ class Connection(object):
 
         # Check if we have enough parameters to call method
         if len(params) < argnum - defnum - 2:
-            return # too few parameters
+            self.send_message('ERR_NEEDMOREPARAMS',
+                              msgfrom = self.server.name,
+                              msgto = self.user.nick if self.user else '',
+                              command = command)
+            return
 
         # Call method
         method(prefix, *params[0:argnum - 2])
 
     def cmd_nick(self, prefix: Optional[str], nick: Optional[str] = None):
         if not nick:
-            return # ERR_NONICKNAMEGIVEN
+            self.send_message('ERR_NONICKNAMEGIVEN',
+                              msgfrom = self.server.name,
+                              msgto = '')
+            return
         self.user = User(nick = nick, connection = self, hopcount = 0)
 
     def cmd_user(self, prefix: Optional[str], username: str, hostname: str,
@@ -66,7 +73,10 @@ class Connection(object):
             return
 
         if self.user.registered:
-            return # ERR_ALREADYREGISTRED
+            self.send_message('ERR_ALREADYREGISTRED',
+                              msgfrom = self.server.name,
+                              msgto = self.user.nick)
+            return
 
         self.user.register(username = '~' + username,
                            hostname = self.address,
