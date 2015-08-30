@@ -8,6 +8,8 @@ messages = {
     'RPL_MOTD':             ('372', ':- %(text)s'),
     'RPL_MOTDSTART':        ('375', ':- %(servername)s Message of the day - '),
     'RPL_ENDOFMOTD':        ('376', ':End of MOTD command'),
+
+    'ERR_NOSUCHSERVER':     ('402', '%(servername)s :No such server'),
     'ERR_NOMOTD':           ('422', ':MOTD File is missing'),
     'ERR_NONICKNAMEGIVEN':  ('431', ':No nickname given'),
     'ERR_ERRONEUSNICKNAME': ('432', '%(nick)s :Erroneus nickname'),
@@ -15,4 +17,6 @@ messages = {
     'ERR_NICKCOLLISION':    ('436', '%(nick)s :Nickname collision KILL'),
     'ERR_NEEDMOREPARAMS':   ('461', '%(command)s :Not enough parameters'),
     'ERR_ALREADYREGISTRED': ('462', ':You may not reregister'),
+
+    'CMD_PONG':             ('PONG', ':%(payload)s'),
 }

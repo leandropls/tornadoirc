@@ -42,6 +42,13 @@ class NickCollisionError(CommandError):
 ##
 # Other
 ##
+class NoSuchServerError(CommandError):
+    '''402 - No such server'''
+    def __init__(self, servername: str, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+        self.msgid = 'ERR_NOSUCHSERVER'
+        self.msgparams = {'servername': servername}
+
 class NoMotdError(CommandError):
     '''422 - You may not reregister'''
     def __init__(self, *args, **kwargs):

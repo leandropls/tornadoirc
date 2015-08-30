@@ -97,9 +97,17 @@ class User(object):
                                      **kwargs)
 
     def cmd_motd(self, prefix: Optional[str], target: Optional[str] = None):
+        '''Process MOTD command.'''
         if not settings.ircd['motd']:
             raise NoMotdError()
         self.send_message('RPL_MOTDSTART', servername = self.server.name)
         for text in settings.ircd['motd']:
             self.send_message('RPL_MOTD', text = text)
         self.send_message('RPL_ENDOFMOTD')
+
+    def cmd_ping(self, prefix: Optional[str], payload: str,
+        destination: Optional[str] = None):
+        '''Process PING command.'''
+        if destination and destination != self.server.name:
+            raise NoSuchServerError(servername = destination)
+        self.send_message('CMD_PONG', payload = payload)
