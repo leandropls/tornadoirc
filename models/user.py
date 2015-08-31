@@ -136,7 +136,7 @@ class User(object):
     ##
     # Server command handlers
     ##
-    def cmd_motd(self, prefix: Optional[str], target: Optional[str] = None):
+    def cmd_motd(self, target: Optional[str] = None):
         '''Process MOTD command.'''
         if not self.server.settings['motd']:
             raise NoMotdError()
@@ -145,18 +145,17 @@ class User(object):
             self.send_message('RPL_MOTD', text = text[0 : min(len(text) + 1, 81)])
         self.send_message('RPL_ENDOFMOTD')
 
-    def cmd_ping(self, prefix: Optional[str], payload: str,
-        destination: Optional[str] = None):
+    def cmd_ping(self, payload: str, destination: Optional[str] = None):
         '''Process PING command.'''
         if destination and destination != self.server.name:
             raise NoSuchServerError(servername = destination)
         self.send_message('CMD_PONG', payload = payload)
 
-    def cmd_pong(self, prefix: Optional[str], payload: str):
+    def cmd_pong(self, payload: str):
         IOLoop.current().remove_timeout(self.timeouttimer)
         self.timeouttimer = None
 
-    def cmd_nick(self, prefix: Optional[str], nick: str):
+    def cmd_nick(self, nick: str):
         '''Process NICK command.'''
         oldaddr = self.address
         oldnick = self.nick
@@ -167,21 +166,21 @@ class User(object):
 
         self.send_message('CMD_NICK', oldaddr = oldaddr, nick = self.nick)
 
-    def cmd_privmsg(self, prefix: Optional[str], target: str, text: str):
+    def cmd_privmsg(self, target: str, text: str):
         '''Process PRIVMSG command.'''
         if target not in self.server.users:
             raise NoSuchNickError(nick = target)
         target_user = self.server.users[target]
         target_user.send_privmsg(origin = self, text = text)
 
-    def cmd_notice(self, prefix: Optional[str], target: str, text: str):
+    def cmd_notice(self, target: str, text: str):
         '''Process NOTICE command.'''
         if target not in self.server.users:
             return
         target_user = self.server.users[target]
         target_user.send_notice(origin = self, text = text)
 
-    def cmd_profiling(self, prefix: Optional[str]):
+    def cmd_profiling(self):
         import yappi
         stats = yappi.get_func_stats()
         self.send_notice(origin = self.server.name,

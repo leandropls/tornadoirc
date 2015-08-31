@@ -6,7 +6,7 @@ from models.exceptions import *
 
 from tornado.iostream import IOStream
 
-from typing import Undefined, List, Optional
+from typing import Undefined, List, Optional, Callable
 import logging
 import inspect
 
@@ -46,31 +46,48 @@ class Connection(object):
         # Created method name
         methodname = 'cmd_%s' % command
 
-        # Check if method exists and fetch it if it does
-        method = None
-        if self.user:
-            if hasattr(self.user, methodname):
-                method = getattr(self.user, methodname)
-        if not method:
-            if not hasattr(self, methodname):
-                return
-            method = getattr(self, methodname)
-
         # Process command
         try:
-            # Check method args
-            args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
-            argnum = len(args) if args else 0
-            defnum = len(defaults) if defaults else 0
-
-            # Check if we have enough parameters to call method
-            if len(params) < argnum - defnum - 2:
-                raise NeedMoreParamsError(command = command.upper())
-
-            # Call method
-            method(prefix, *params[0 : argnum - 2])
+            if self.user and hasattr(self.user, methodname):
+                self.call_user_method(command, params)
+            elif hasattr(self, methodname):
+                self.call_conn_method(prefix, command, params)
         except CommandError as e:
             self.send_message(msgid = e.msgid, **e.msgparams)
+
+    def call_conn_method(self, prefix: str, command: str, params: list):
+        '''Process command by calling method on Connection.'''
+        methodname = 'cmd_%s' % command.lower()
+        method = getattr(self, methodname)
+
+        # Check method args
+        args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
+        argnum = len(args) if args else 0
+        defnum = len(defaults) if defaults else 0
+
+        # Check if we have enough parameters to call method
+        if len(params) < argnum - defnum - 2:
+            raise NeedMoreParamsError(command = command.upper())
+
+        method(prefix, *params[0 : argnum - 2])
+
+    def call_user_method(self, command: str, params: list):
+        '''Process command by calling method on User.'''
+        methodname = 'cmd_%s' % command.lower()
+        method = getattr(self.user, methodname)
+
+        # Check method args
+        args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
+        argnum = len(args) if args else 0
+        defnum = len(defaults) if defaults else 0
+
+        # Check if we have enough parameters to call method
+        if len(params) < argnum - defnum - 1:
+            raise NeedMoreParamsError(command = command.upper())
+
+        # Call method
+        method(*params[0 : argnum - 1])
+
 
     def cmd_nick(self, prefix: Optional[str], nick: Optional[str] = None):
         '''Process NICK command.'''
