@@ -29,6 +29,7 @@ messages = {
     'RPL_MYINFO':           ':%(servername)s 004 %(target)s :%(servername)s %(version)s %(usermodes)s %(channelmodes)s',
     'RPL_LUSERCLIENT':      ':%(servername)s 251 %(target)s :There are %(usercount)s users and %(servicescount)s services on %(serverscount)s servers',
     'RPL_LUSERME':          ':%(servername)s 255 %(target)s :I have %(usercount)s clients and %(serverscount)s servers',
+    'RPL_ISON':             ':%(servername)s 303 %(target)s :%(nicklist)s',
     'RPL_WHOISUSER':        ':%(servername)s 311 %(target)s %(nick)s %(username)s %(hostname)s * :%(realname)s',
     'RPL_WHOISSERVER':      ':%(servername)s 312 %(target)s %(nick)s %(servername)s :%(serverinfo)s',
     'RPL_ENDOFWHOIS':       ':%(servername)s 318 %(target)s %(nick)s :End of WHOIS list',

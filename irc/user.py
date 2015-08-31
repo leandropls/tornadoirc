@@ -4,7 +4,7 @@ from .exceptions import *
 
 from tornado.ioloop import IOLoop
 
-from typing import Undefined, Optional
+from typing import Undefined, Optional, List
 import logging
 import re
 
@@ -247,3 +247,15 @@ class User(object):
                           servername = user.servername,
                           serverinfo = '')
         self.send_message('RPL_ENDOFWHOIS', nick = user.nick)
+
+    ##
+    # RFC2812 - 4. Optional features
+    ##
+    def cmd_ison(self, nick: str, *nicklist: List[str]):
+        '''Process ISON command.'''
+        nicklist = list(nicklist)
+        nicklist.insert(0, nick)
+        users = self.server.users
+        online = [nick for nick in nicklist if nick in users]
+        online = ' '.join(online)
+        self.send_message('RPL_ISON', nicklist = online)
