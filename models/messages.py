@@ -18,6 +18,7 @@ messages = {
     'ERR_NEEDMOREPARAMS':   ':%(servername)s 461 %(target)s %(command)s :Not enough parameters',
     'ERR_ALREADYREGISTRED': ':%(servername)s 462 %(target)s :You may not reregister',
 
+    'CMD_ERROR':            'ERROR :%(text)s',
     'CMD_NICK':             ':%(oldaddr)s NICK :%(nick)s',
     'CMD_PING':             'PING :%(servername)s',
     'CMD_PONG':             ':%(servername)s PONG %(servername)s :%(payload)s',
