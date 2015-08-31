@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from .exceptions import *
+from .util import LowerCaseDict
 
 from tornado.ioloop import IOLoop
 
@@ -19,6 +20,7 @@ class User(object):
     realname = Undefined(Optional[str])
     connection = Undefined('Connection')
     server = Undefined('IRCServer')
+    channels = Undefined(LowerCaseDict)
     pingtimer = None
     timeouttimer = None
 
@@ -69,6 +71,7 @@ class User(object):
         self.hostname = hostname
         self.servername = servername
         self.realname = realname
+        self.channels = LowerCaseDict()
 
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
@@ -199,6 +202,19 @@ class User(object):
         '''Process QUIT command.'''
         self.send_message('CMD_ERROR', text = 'Quit: %s' % message)
         self.connection.stream.close()
+
+    ##
+    # RFC2812 - 3.2 Channel operations
+    ##
+    def cmd_join(self, channel: str = '', *chanlist: List[str]):
+        chanlist = list(chanlist)
+        chanlist.insert(0, channel)
+        chancatalog = self.server.channels
+        for name in chanlist:
+            if name in self.channels:
+                continue
+            chanref = chancatalog.join(user = self, name = name)
+            self.channels[name] = chanref
 
     ##
     # RFC2812 - 3.4 Server queries and commands
