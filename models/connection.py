@@ -31,16 +31,13 @@ class Connection(object):
         self.req_user = None
         self.req_nick = None
 
-    def send_message(self, msgid: str, msgfrom: Optional[str] = None,
-                     msgto: Optional[str] = None, **params):
+    def send_message(self, msgid: str, sender: Optional[str] = None, **params):
         '''Send message to connection.'''
-        if msgfrom == None:
-            msgfrom = self.server.name
-        if msgto == None:
-            msgto = self.user.nick if self.user else '*'
-        params.update(msgfrom = msgfrom, msgto = msgto)
-        message = ':%(msgfrom)s ' + messages[msgid][0] + ' %(msgto)s ' + messages[msgid][1] + '\r\n'
-        message = message % params
+        params['servername'] = self.server.name
+        params['target'] = self.user.nick if self.user else '*'
+        params['targetaddr'] = self.user.address if self.user else '*'
+
+        message = messages[msgid] % params + '\r\n'
         message = message.encode('utf-8')
         self.stream.write(message)
 
@@ -51,7 +48,7 @@ class Connection(object):
 
         # Check if method exists and fetch it if it does
         method = None
-        if self.user and self.user.registered:
+        if self.user:
             if hasattr(self.user, methodname):
                 method = getattr(self.user, methodname)
         if not method:
@@ -92,7 +89,7 @@ class Connection(object):
         if not self.req_nick or not self.req_user:
             return
 
-        if self.user and self.user.registered:
+        if self.user:
             raise AlreadyRegisteredError()
 
         self.user = User(nick = self.req_nick, server = self.server,
@@ -102,6 +99,7 @@ class Connection(object):
                          servername = self.server.name,
                          realname = self.req_user['realname'])
         self.server.users[self.user.nick] = self.user
+        self.user.send_welcome()
 
     def closed(self):
         del self.server.users[self.user.nick]
