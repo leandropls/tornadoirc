@@ -61,6 +61,7 @@ class Connection(object):
         params['servername'] = self.server.name
         params['target'] = self.user.nick if self.user else '*'
         params['targetaddr'] = self.user.address if self.user else '*'
+        params['ipaddr'] = self.address
 
         message = messages[msgid] % params + '\r\n'
         message = message.encode('utf-8')
