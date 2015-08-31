@@ -1,5 +1,27 @@
 # coding: utf-8
 
+#    311    RPL_WHOISUSER
+#               "<nick> <user> <host> * :<real name>"
+#        312    RPL_WHOISSERVER
+#               "<nick> <server> :<server info>"
+#        313    RPL_WHOISOPERATOR
+#               "<nick> :is an IRC operator"
+#
+#
+#
+#
+# Kalt                         Informational                     [Page 44]
+#
+# RFC 2812          Internet Relay Chat: Client Protocol        April 2000
+#
+#
+#        317    RPL_WHOISIDLE
+#               "<nick> <integer> :seconds idle"
+#        318    RPL_ENDOFWHOIS
+#               "<nick> :End of WHOIS list"
+#        319    RPL_WHOISCHANNELS
+#               "<nick> :*( ( "@" / "+" ) <channel> " " )"
+
 messages = {
     'RPL_WELCOME':          ':%(servername)s 001 %(target)s :Welcome to the Internet Relay Network %(targetaddr)s',
     'RPL_YOURHOST':         ':%(servername)s 002 %(target)s :Your host is %(servername)s, running version %(version)s',
@@ -7,6 +29,9 @@ messages = {
     'RPL_MYINFO':           ':%(servername)s 004 %(target)s :%(servername)s %(version)s %(usermodes)s %(channelmodes)s',
     'RPL_LUSERCLIENT':      ':%(servername)s 251 %(target)s :There are %(usercount)s users and %(servicescount)s services on %(serverscount)s servers',
     'RPL_LUSERME':          ':%(servername)s 255 %(target)s :I have %(usercount)s clients and %(serverscount)s servers',
+    'RPL_WHOISUSER':        ':%(servername)s 311 %(target)s %(nick)s %(username)s %(hostname)s * :%(realname)s',
+    'RPL_WHOISSERVER':      ':%(servername)s 312 %(target)s %(nick)s %(servername)s :%(serverinfo)s',
+    'RPL_ENDOFWHOIS':       ':%(servername)s 318 %(target)s %(nick)s :End of WHOIS list',
     'RPL_MOTD':             ':%(servername)s 372 %(target)s :- %(text)s',
     'RPL_MOTDSTART':        ':%(servername)s 375 %(target)s :- %(servername)s Message of the day - ',
     'RPL_ENDOFMOTD':        ':%(servername)s 376 %(target)s :End of MOTD command',

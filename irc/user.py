@@ -222,3 +222,28 @@ class User(object):
         self.send_message('RPL_LUSERME',
                           usercount = len(self.server.users),
                           serverscount = 0)
+
+    ##
+    # RFC2812 - 3.6 User based queries
+    ##
+    def cmd_whois(self, par1: str, par2: Optional[str] = None):
+        '''Process WHOIS command.'''
+        if par2:
+            target = par1
+            mask = par2
+        else:
+            target = None
+            mask = par1
+        nick = mask.split('!')[0]
+
+        if nick not in self.server.users:
+            raise NoSuchNickError(nick = nick)
+        user = self.server.users[nick]
+
+        self.send_message('RPL_WHOISUSER', nick = user.nick,
+                          username = user.username, hostname = user.hostname,
+                          realname = user.realname)
+        self.send_message('RPL_WHOISSERVER', nick = user.nick,
+                          servername = user.servername,
+                          serverinfo = '')
+        self.send_message('RPL_ENDOFWHOIS', nick = user.nick)
