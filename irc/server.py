@@ -9,6 +9,8 @@ from tornado.iostream import StreamClosedError
 from typing import Undefined
 import logging
 import re
+import sys
+import os.path
 
 logger = logging.getLogger('tornado.general')
 
@@ -96,5 +98,9 @@ class IRCTCPServer(TCPServer):
                 # Delgate handling of message
                 connection.on_read(prefix, command, params)
             except Exception as e:
-                logger.info('IOStream read loop failed: %s', str(e))
+                error_desc = '(%s) %s' % (sys.exc_info()[0].__name__, str(e))
+                error_file = os.path.basename(sys.exc_info()[2].tb_frame.f_code.co_filename)
+                error_line = sys.exc_info()[2].tb_lineno
+                logger.info('IOStream read loop failed at %s (line: %s): %s',
+                            error_file, error_line, error_desc)
                 return
