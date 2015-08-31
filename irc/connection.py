@@ -37,7 +37,7 @@ class Connection(object):
     def on_read(self, prefix: str, command: str, params: List[str]):
         '''Process message received from connection.'''
         # Created method name
-        methodname = 'cmd_%s' % command
+        methodname = 'cmd_%s' % command.lower()
 
         # Process command
         try:

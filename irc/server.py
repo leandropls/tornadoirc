@@ -49,7 +49,6 @@ class IRCTCPServer(TCPServer):
         r'(?P<command>[a-zA-Z]+|[0-9]{3})'
         r'[ ]*'
         r'(?P<params>[\S: ]+)?'
-        r'\r?\n'
     )
 
     @gen.coroutine
@@ -69,6 +68,7 @@ class IRCTCPServer(TCPServer):
                     logger.info('Connection from %s closed.', address[0])
                     return
                 data = data.decode('utf-8', 'ignore')
+                data = data.rstrip('\r\n')
 
                 # Parse message
                 match = self.message_regex.match(data)
@@ -81,19 +81,18 @@ class IRCTCPServer(TCPServer):
                     prefix = prefix.split(':', maxsplit = 1)[1].rstrip()
                 param_str = param_str if param_str else ''
 
-                command = command.lower()
-
                 params = []
-                if param_str:
-                    autoword = True
-                    for word in param_str.split(' '):
-                        if autoword or (word[0] == ':'):
-                            if word[0] == ':':
-                                autoword = False
-                                word = word.split(':')[1] if len(word) > 1 else ''
-                            params.append(word)
-                        else:
-                            params[-1] = '%s %s' % (params[-1], word)
+                autoword = True
+                for word in param_str.split(' '):
+                    if not word:
+                        continue
+                    if autoword or (word[0] == ':'):
+                        if word[0] == ':':
+                            autoword = False
+                            word = word.split(':')[1] if len(word) > 1 else ''
+                        params.append(word)
+                    else:
+                        params[-1] = '%s %s' % (params[-1], word)
 
                 # Delgate handling of message
                 connection.on_read(prefix, command, params)
