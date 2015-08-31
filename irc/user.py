@@ -125,7 +125,8 @@ class User(object):
                           usermodes = self.server.usermodes,
                           channelmodes = self.server.channelmodes)
 
-        self.cmd_motd(None)
+        self.cmd_lusers()
+        self.cmd_motd()
         self.send_ping()
 
     def send_privmsg(self, origin: str, text: str):
@@ -209,3 +210,14 @@ class User(object):
         for text in self.server.settings['motd']:
             self.send_message('RPL_MOTD', text = text[0 : min(len(text) + 1, 81)])
         self.send_message('RPL_ENDOFMOTD')
+
+    def cmd_lusers(self, mask: Optional[str] = None,
+                   target: Optional[str] = None):
+        '''Process LUSERS command.'''
+        self.send_message('RPL_LUSERCLIENT',
+                          usercount = len(self.server.users),
+                          servicescount = 0,
+                          serverscount = 1)
+        self.send_message('RPL_LUSERME',
+                          usercount = len(self.server.users),
+                          serverscount = 0)

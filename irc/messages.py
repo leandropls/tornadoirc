@@ -5,6 +5,8 @@ messages = {
     'RPL_YOURHOST':         ':%(servername)s 002 %(target)s :Your host is %(servername)s, running version %(version)s',
     'RPL_CREATED':          ':%(servername)s 003 %(target)s :This server was created %(date)s',
     'RPL_MYINFO':           ':%(servername)s 004 %(target)s :%(servername)s %(version)s %(usermodes)s %(channelmodes)s',
+    'RPL_LUSERCLIENT':      ':%(servername)s 251 %(target)s :There are %(usercount)s users and %(servicescount)s services on %(serverscount)s servers',
+    'RPL_LUSERME':          ':%(servername)s 255 %(target)s :I have %(usercount)s clients and %(serverscount)s servers',
     'RPL_MOTD':             ':%(servername)s 372 %(target)s :- %(text)s',
     'RPL_MOTDSTART':        ':%(servername)s 375 %(target)s :- %(servername)s Message of the day - ',
     'RPL_ENDOFMOTD':        ':%(servername)s 376 %(target)s :End of MOTD command',
