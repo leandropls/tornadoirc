@@ -95,7 +95,7 @@ class Connection(object):
         method = getattr(self, methodname)
 
         # Check method args
-        args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
+        args, varargs, _, defaults, _, _, _ = inspect.getfullargspec(method)
         argnum = len(args) if args else 0
         defnum = len(defaults) if defaults else 0
 
@@ -103,7 +103,11 @@ class Connection(object):
         if len(params) < argnum - defnum - 2:
             raise NeedMoreParamsError(command = command.upper())
 
-        method(prefix, *params[0 : argnum - 2])
+        # Call method
+        if not varargs:
+            method(prefix, *params[0 : argnum - 2])
+        else:
+            method(prefix, *params)
 
     def _call_user_method(self, command: str, params: list):
         '''Process command by calling method on User.'''
@@ -111,7 +115,7 @@ class Connection(object):
         method = getattr(self.user, methodname)
 
         # Check method args
-        args, _, _, defaults, _, _, _ = inspect.getfullargspec(method)
+        args, varargs, _, defaults, _, _, _ = inspect.getfullargspec(method)
         argnum = len(args) if args else 0
         defnum = len(defaults) if defaults else 0
 
@@ -120,7 +124,10 @@ class Connection(object):
             raise NeedMoreParamsError(command = command.upper())
 
         # Call method
-        method(*params[0 : argnum - 1])
+        if not varargs:
+            method(*params[0 : argnum - 1])
+        else:
+            method(*params)
 
     ##
     # User initiated actions
