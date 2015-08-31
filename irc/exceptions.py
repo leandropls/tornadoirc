@@ -41,6 +41,7 @@ class NickCollisionError(CommandError):
 # Other
 ##
 class NoSuchNickError(CommandError):
+    '''401 - No such nick'''
     def __init__(self, nick: str):
         super().__init__()
         self.msgid = 'ERR_NOSUCHNICK'
@@ -53,12 +54,26 @@ class NoSuchServerError(CommandError):
         self.msgid = 'ERR_NOSUCHSERVER'
         self.msgparams = {'servername': servername}
 
+class NoSuchChannelError(CommandError):
+    '''403 - No such channel'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_NOSUCHCHANNEL'
+        self.msgparams = {'channel': channel}
+
 class NoMotdError(CommandError):
     '''422 - You may not reregister'''
     def __init__(self):
         super().__init__()
         self.msgid = 'ERR_NOMOTD'
         self.msgparams = {}
+
+class NotOnChannelError(CommandError):
+    '''442 - No such channel'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_NOTONCHANNEL'
+        self.msgparams = {'channel': channel}
 
 class NeedMoreParamsError(CommandError):
     '''461 - Not enough parameters'''
