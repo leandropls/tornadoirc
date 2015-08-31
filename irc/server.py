@@ -2,6 +2,7 @@
 
 from .connection import Connection
 from .util import LowerCaseDict
+from .channel import ChannelCatalog
 
 from tornado.tcpserver import TCPServer
 from tornado import gen
@@ -25,6 +26,7 @@ class IRCServer(object):
     usermodes = ''
     channelmodes = ''
     users = Undefined(dict)
+    channels = Undefined(ChannelCatalog)
 
     def __init__(self, settings):
         self.tcpserver = IRCTCPServer(self)
@@ -32,6 +34,7 @@ class IRCServer(object):
         self.name = settings['name']
         self.date = settings['date']
         self.users = LowerCaseDict()
+        self.channels = ChannelCatalog()
 
     def listen(self, *args, **kwargs):
         '''Listen to address and port.'''
