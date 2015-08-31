@@ -100,11 +100,13 @@ class User(object):
         self.send_message('CMD_PING')
 
     def timeout(self):
+        '''Disconnect user for timeout.'''
         self.send_message('CMD_ERROR', text = 'Ping timeout')
         if not self.connection.stream.closed():
             self.connection.stream.close()
 
     def send_welcome(self):
+        '''Send welcome messages to user.'''
         self.send_message('RPL_WELCOME')
         self.send_message('RPL_YOURHOST', version = self.server.version)
         self.send_message('RPL_CREATED', date = self.server.date)
@@ -116,6 +118,12 @@ class User(object):
 
         self.cmd_motd(None)
         self.send_ping()
+
+    def send_privmsg(self, origin: str, text: str):
+        '''Send PRIVMSG command to user.'''
+        self.send_message('CMD_PRIVMSG',
+                          originaddr = origin.address,
+                          text = text)
 
     ##
     # Server command handlers
@@ -156,6 +164,4 @@ class User(object):
         if target not in self.server.users:
             raise NoSuchNickError(nick = target)
         target_user = self.server.users[target]
-        target_user.send_message('CMD_PRIVMSG',
-                                 originaddr = self.address,
-                                 text = text)
+        target_user.send_privmsg(origin = self, text = text)
