@@ -55,23 +55,21 @@ class Channel(object):
     def send_topic(self, user: 'User'):
         '''Send channel topic to user.'''
         if self.topic:
-            self.user.send_message('RPL_TOPIC',
-                                   channel = self.name,
-                                   topic = self.topic)
+            user.send_message('RPL_TOPIC',
+                              channel = self.name, topic = self.topic)
         else:
-            self.user.send_message('RPL_NOTOPIC',
-                                   channel = self.name)
+            user.send_message('RPL_NOTOPIC', channel = self.name)
 
     def send_names(self, user: 'User'):
         '''Send current channel members nicks to user.'''
         users = self.users
         nicklist = [users[nick]['user'].nick for nick in users]
         nicklist = ' '.join(nicklist)
-        self.user.send_message('RPL_NAMREPLY',
-                               channel = self.name
-                               chantype = '=',
-                               nicklist = nicklist)
-        self.user.send_message('RPL_ENDOFNAMES', channel = self.name)
+        user.send_message('RPL_NAMREPLY',
+                          channel = self.name,
+                          chantype = '=',
+                          nicklist = nicklist)
+        user.send_message('RPL_ENDOFNAMES', channel = self.name)
 
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''
@@ -81,6 +79,6 @@ class ChannelCatalog(LowerCaseDict):
         if name in self:
             channel = self[name]
         else:
-            channel = Channel(name = name, catalog = self, user = user)
-        channel.append(user)
+            channel = Channel(name = name, catalog = self)
+        channel.join(user)
         return channel
