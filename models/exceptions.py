@@ -42,6 +42,12 @@ class NickCollisionError(CommandError):
 ##
 # Other
 ##
+class NoSuchNickError(CommandError):
+    def __init__(self, nick: str, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+        self.msgid = 'ERR_NOSUCHNICK'
+        self.msgparams = {'nick': nick}
+
 class NoSuchServerError(CommandError):
     '''402 - No such server'''
     def __init__(self, servername: str, *args, **kwargs):
