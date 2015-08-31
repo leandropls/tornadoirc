@@ -121,8 +121,9 @@ class User(object):
 
     def send_privmsg(self, origin: str, text: str):
         '''Send PRIVMSG command to user.'''
+        originaddr = origin.address if hasattr(origin, 'address') else str(origin)
         self.send_message('CMD_PRIVMSG',
-                          originaddr = origin.address,
+                          originaddr = originaddr,
                           text = text)
 
     ##
@@ -165,3 +166,16 @@ class User(object):
             raise NoSuchNickError(nick = target)
         target_user = self.server.users[target]
         target_user.send_privmsg(origin = self, text = text)
+
+    def cmd_profiling(self, prefix: Optional[str]):
+        import yappi
+        stats = yappi.get_func_stats()
+        self.send_privmsg(origin = self.server.name,
+                          text = 'name\tncall\ttsub\ttot\ttavg')
+        for row in stats:
+            self.send_privmsg(origin = self.server.name,
+                text = '%s\t%s\t%s\t%s\t%s' % (row[12][-44:-1],
+                                               format(row[4] / row[3], '.5f'),
+                                               format(row[7], '.5f'),
+                                               format(row[6], '.5f'),
+                                               format(row[11], '.5f')))
