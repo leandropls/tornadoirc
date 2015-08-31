@@ -42,7 +42,7 @@ class User(object):
         nicklen = self.server.settings['nicklen']
         value = value[0 : min(len(value), nicklen)]
 
-        if value == self._nick:
+        if value.lower() == self._nick.lower():
             return
 
         if value in self.server.users:
@@ -62,6 +62,7 @@ class User(object):
                  realname: str):
         self.connection = connection
         self.server = server
+        self._nick = ''
         self.nick = nick
         self.hopcount = hopcount
         self.username = username
@@ -161,7 +162,7 @@ class User(object):
         oldaddr = self.address
         oldnick = self.nick
         self.nick = nick
-        if self.nick != oldnick:
+        if self.nick.lower() != oldnick.lower():
             self.server.users[self.nick] = self
             del self.server.users[oldnick]
 

@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from .connection import Connection
+from .util import LowerCaseDict
 
 from tornado.tcpserver import TCPServer
 from tornado import gen
@@ -30,7 +31,7 @@ class IRCServer(object):
         self.settings = settings
         self.name = settings['name']
         self.date = settings['date']
-        self.users = {}
+        self.users = LowerCaseDict()
 
     def listen(self, *args, **kwargs):
         '''Listen to address and port.'''
