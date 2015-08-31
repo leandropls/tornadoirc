@@ -146,15 +146,6 @@ class User(object):
     ##
     # Server command handlers
     ##
-    def cmd_motd(self, target: Optional[str] = None):
-        '''Process MOTD command.'''
-        if not self.server.settings['motd']:
-            raise NoMotdError()
-        self.send_message('RPL_MOTDSTART')
-        for text in self.server.settings['motd']:
-            self.send_message('RPL_MOTD', text = text[0 : min(len(text) + 1, 81)])
-        self.send_message('RPL_ENDOFMOTD')
-
     def cmd_ping(self, payload: str, destination: Optional[str] = None):
         '''Process PING command.'''
         if destination and destination != self.server.name:
@@ -203,3 +194,19 @@ class User(object):
                                                format(row[7], '.5f'),
                                                format(row[6], '.5f'),
                                                format(row[11], '.5f')))
+    def cmd_quit(self, message: str = ''):
+        '''Process QUIT command.'''
+        self.send_message('CMD_ERROR', text = 'Quit: %s' % message)
+        self.connection.stream.close()
+
+    ##
+    # RFC2812 - 3.4 Server queries and commands
+    ##
+    def cmd_motd(self, target: Optional[str] = None):
+        '''Process MOTD command.'''
+        if not self.server.settings['motd']:
+            raise NoMotdError()
+        self.send_message('RPL_MOTDSTART')
+        for text in self.server.settings['motd']:
+            self.send_message('RPL_MOTD', text = text[0 : min(len(text) + 1, 81)])
+        self.send_message('RPL_ENDOFMOTD')
