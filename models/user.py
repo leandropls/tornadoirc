@@ -150,3 +150,12 @@ class User(object):
             del self.server.users[oldnick]
 
         self.send_message('CMD_NICK', oldaddr = oldaddr, nick = self.nick)
+
+    def cmd_privmsg(self, prefix: Optional[str], target: str, text: str):
+        '''Process PRIVMSG command.'''
+        if target not in self.server.users:
+            raise NoSuchNickError(nick = target)
+        target_user = self.server.users[target]
+        target_user.send_message('CMD_PRIVMSG',
+                                 originaddr = self.address,
+                                 text = text)
