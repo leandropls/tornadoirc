@@ -9,6 +9,7 @@ messages = {
     'RPL_MOTDSTART':        ':%(servername)s 375 %(target)s :- %(servername)s Message of the day - ',
     'RPL_ENDOFMOTD':        ':%(servername)s 376 %(target)s :End of MOTD command',
 
+    'ERR_NOSUCHNICK':       ':%(servername)s 401 %(target)s %(nick)s :No such nick/channel',
     'ERR_NOSUCHSERVER':     ':%(servername)s 402 %(target)s %(servername)s :No such server',
     'ERR_NOMOTD':           ':%(servername)s 422 %(target)s :MOTD File is missing',
     'ERR_NONICKNAMEGIVEN':  ':%(servername)s 431 %(target)s :No nickname given',
@@ -22,4 +23,5 @@ messages = {
     'CMD_NICK':             ':%(oldaddr)s NICK :%(nick)s',
     'CMD_PING':             'PING :%(servername)s',
     'CMD_PONG':             ':%(servername)s PONG %(servername)s :%(payload)s',
+    'CMD_PRIVMSG':          ':%(originaddr)s PRIVMSG %(target)s :%(text)s',
 }
