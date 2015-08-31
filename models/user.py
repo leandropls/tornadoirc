@@ -3,7 +3,7 @@
 from models.server import Server
 from models.exceptions import *
 
-from tornado.ioloop import PeriodicCallback
+from tornado.ioloop import IOLoop
 
 from typing import Undefined, Optional
 import logging
@@ -21,6 +21,7 @@ class User(object):
     connection = Undefined('Connection')
     server = Undefined(Server)
     pingtimer = None
+    timeouttimer = None
 
     ##
     # Nick getter and setter
@@ -69,16 +70,14 @@ class User(object):
         self.servername = servername
         self.realname = realname
 
-        self.pingtimer = PeriodicCallback(self.send_ping,
-            int(self.server.settings['pinginterval'] * 1e3))
-        self.pingtimer.start()
-
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
 
     def closed(self):
         if self.pingtimer:
             self.pingtimer.stop()
+        if self.timeouttimer:
+            self.timeouttimer.stop()
 
     ##
     # Server send msg commands
@@ -89,9 +88,21 @@ class User(object):
 
     def send_ping(self):
         '''Send PING to user'''
-        message = 'PING :%s\r\n' % self.server.name
-        message = message.encode('utf-8')
-        self.connection.stream.write(message)
+        if self.connection.stream.closed():
+            return
+        io_loop = IOLoop.current()
+        self.pingtimer = io_loop.call_later(
+                            self.server.settings['pinginterval'],
+                            self.send_ping)
+        self.timeouttimer = io_loop.call_later(
+                                self.server.settings['pingtimeout'],
+                                self.timeout)
+        self.send_message('CMD_PING')
+
+    def timeout(self):
+        self.send_message('CMD_ERROR', text = 'Ping timeout')
+        if not self.connection.stream.closed():
+            self.connection.stream.close()
 
     def send_welcome(self):
         self.send_message('RPL_WELCOME')
@@ -104,6 +115,7 @@ class User(object):
                           channelmodes = self.server.channelmodes)
 
         self.cmd_motd(None)
+        self.send_ping()
 
     ##
     # Server command handlers
@@ -123,6 +135,10 @@ class User(object):
         if destination and destination != self.server.name:
             raise NoSuchServerError(servername = destination)
         self.send_message('CMD_PONG', payload = payload)
+
+    def cmd_pong(self, prefix: Optional[str], payload: str):
+        IOLoop.current().remove_timeout(self.timeouttimer)
+        self.timeouttimer = None
 
     def cmd_nick(self, prefix: Optional[str], nick: str):
         '''Process NICK command.'''
