@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from models.connection import Connection
+from .connection import Connection
 
 from tornado.tcpserver import TCPServer
 from tornado import gen

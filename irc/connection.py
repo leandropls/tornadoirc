@@ -1,8 +1,8 @@
 # coding: utf-8
 
-from models.user import User
-from models.messages import messages
-from models.exceptions import *
+from .user import User
+from .messages import messages
+from .exceptions import *
 
 from tornado.iostream import IOStream
 

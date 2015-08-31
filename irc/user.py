@@ -1,7 +1,6 @@
 # coding: utf-8
 
-from models.server import Server
-from models.exceptions import *
+from .exceptions import *
 
 from tornado.ioloop import IOLoop
 
@@ -19,7 +18,7 @@ class User(object):
     servername = Undefined(Optional[str])
     realname = Undefined(Optional[str])
     connection = Undefined('Connection')
-    server = Undefined(Server)
+    server = Undefined('IRCServer')
     pingtimer = None
     timeouttimer = None
 
@@ -58,7 +57,7 @@ class User(object):
     ##
     # Init
     ##
-    def __init__(self, nick: str, connection: 'Connection', server: Server,
+    def __init__(self, nick: str, connection: 'Connection', server: 'Server',
                  hopcount: int, username: str, hostname: str, servername: str,
                  realname: str):
         self.connection = connection

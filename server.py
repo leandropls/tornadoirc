@@ -3,7 +3,7 @@
 
 import settings
 from settings import ircd as ircdsettings
-from servers.irc import IRCServer
+from irc.server import IRCServer
 
 from setproctitle import setproctitle # pylint: disable=no-name-in-module
 from tornado.options import define, options

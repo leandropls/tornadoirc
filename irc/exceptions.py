@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from models.messages import messages
+from .messages import messages
 
 from typing import Undefined
 
