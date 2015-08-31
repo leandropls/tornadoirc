@@ -31,6 +31,31 @@ class Connection(object):
         self.req_user = None
         self.req_nick = None
 
+    ##
+    # Events
+    ##
+    def on_read(self, prefix: str, command: str, params: List[str]):
+        '''Process message received from connection.'''
+        # Created method name
+        methodname = 'cmd_%s' % command
+
+        # Process command
+        try:
+            if self.user and hasattr(self.user, methodname):
+                self._call_user_method(command, params)
+            elif hasattr(self, methodname):
+                self._call_conn_method(prefix, command, params)
+        except CommandError as e:
+            self.send_message(msgid = e.msgid, **e.msgparams)
+
+    def on_close(self):
+        '''Deals with a connection closed event.'''
+        if self.user:
+            self.user.on_close()
+
+    ##
+    # Server initiated actions
+    ##
     def send_message(self, msgid: str, sender: Optional[str] = None, **params):
         '''Send message to connection.'''
         params['servername'] = self.server.name
@@ -41,21 +66,29 @@ class Connection(object):
         message = message.encode('utf-8')
         self.stream.write(message)
 
-    def on_read(self, prefix: str, command: str, params: List[str]):
-        '''Process message received from connection.'''
-        # Created method name
-        methodname = 'cmd_%s' % command
+    def register_user(self):
+        '''Creates new user and adds it to server user\'s list.'''
+        if not self.req_nick or not self.req_user:
+            return
 
-        # Process command
-        try:
-            if self.user and hasattr(self.user, methodname):
-                self.call_user_method(command, params)
-            elif hasattr(self, methodname):
-                self.call_conn_method(prefix, command, params)
-        except CommandError as e:
-            self.send_message(msgid = e.msgid, **e.msgparams)
+        if self.user:
+            raise AlreadyRegisteredError()
 
-    def call_conn_method(self, prefix: str, command: str, params: list):
+        self.user = User(nick = self.req_nick, server = self.server,
+                         connection = self, hopcount = 0,
+                         username = '~' + self.req_user['username'],
+                         hostname = self.address,
+                         servername = self.server.name,
+                         realname = self.req_user['realname'])
+        self.req_nick = None
+        self.req_user = None
+        self.server.users[self.user.nick] = self.user
+        self.user.on_register()
+
+    ##
+    # Command processing auxiliary methods
+    ##
+    def _call_conn_method(self, prefix: str, command: str, params: list):
         '''Process command by calling method on Connection.'''
         methodname = 'cmd_%s' % command.lower()
         method = getattr(self, methodname)
@@ -71,7 +104,7 @@ class Connection(object):
 
         method(prefix, *params[0 : argnum - 2])
 
-    def call_user_method(self, command: str, params: list):
+    def _call_user_method(self, command: str, params: list):
         '''Process command by calling method on User.'''
         methodname = 'cmd_%s' % command.lower()
         method = getattr(self.user, methodname)
@@ -88,7 +121,9 @@ class Connection(object):
         # Call method
         method(*params[0 : argnum - 1])
 
-
+    ##
+    # User initiated actions
+    ##
     def cmd_nick(self, prefix: Optional[str], nick: Optional[str] = None):
         '''Process NICK command.'''
         if not nick:
@@ -96,27 +131,9 @@ class Connection(object):
         self.req_nick = nick
         self.register_user()
 
-    def cmd_user(self, prefix: Optional[str], username: str, hostname: str,
-                 servername: str, realname: str):
-        self.req_user = {'username': username, 'hostname': hostname,
-                         'servername': servername, 'realname': realname}
+    def cmd_user(self, prefix: Optional[str],
+                 username: str, mode: str, unused: str, realname: str):
+        '''Process USER command.'''
+        self.req_user = {'username': username, 'mode': mode,
+                         'realname': realname}
         self.register_user()
-
-    def register_user(self):
-        if not self.req_nick or not self.req_user:
-            return
-
-        if self.user:
-            raise AlreadyRegisteredError()
-
-        self.user = User(nick = self.req_nick, server = self.server,
-                         connection = self, hopcount = 0,
-                         username = '~' + self.req_user['username'],
-                         hostname = self.address,
-                         servername = self.server.name,
-                         realname = self.req_user['realname'])
-        self.server.users[self.user.nick] = self.user
-        self.user.send_welcome()
-
-    def closed(self):
-        del self.server.users[self.user.nick]

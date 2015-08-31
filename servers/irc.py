@@ -63,7 +63,7 @@ class IRCTCPServer(TCPServer):
                 try:
                     data = yield stream.read_until(b'\n', max_bytes = 512)
                 except StreamClosedError:
-                    connection.closed()
+                    connection.on_close()
                     logger.info('Connection from %s closed.', address[0])
                     return
                 data = data.decode('utf-8', 'ignore')

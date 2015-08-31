@@ -73,11 +73,21 @@ class User(object):
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
 
-    def closed(self):
+    ##
+    # Events
+    ##
+    def on_register(self):
+        self.send_welcome()
+
+    def on_close(self):
+        io_loop = IOLoop.current()
         if self.pingtimer:
-            self.pingtimer.stop()
+            io_loop.remove_timeout(self.pingtimer)
+            self.pingtimer = None
         if self.timeouttimer:
-            self.timeouttimer.stop()
+            io_loop.remove_timeout(self.timeouttimer)
+            self.timeoutttimer = None
+        del self.server.users[self.nick]
 
     ##
     # Server send msg commands
@@ -181,6 +191,7 @@ class User(object):
         target_user.send_notice(origin = self, text = text)
 
     def cmd_profiling(self):
+        '''Process PROFILING command.'''
         import yappi
         stats = yappi.get_func_stats()
         self.send_notice(origin = self.server.name,
