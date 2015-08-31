@@ -126,6 +126,13 @@ class User(object):
                           originaddr = originaddr,
                           text = text)
 
+    def send_notice(self, origin: str, text: str):
+        '''Send NOTICE command to user.'''
+        originaddr = origin.address if hasattr(origin, 'address') else str(origin)
+        self.send_message('CMD_NOTICE',
+                          originaddr = originaddr,
+                          text = text)
+
     ##
     # Server command handlers
     ##
@@ -167,13 +174,20 @@ class User(object):
         target_user = self.server.users[target]
         target_user.send_privmsg(origin = self, text = text)
 
+    def cmd_notice(self, prefix: Optional[str], target: str, text: str):
+        '''Process NOTICE command.'''
+        if target not in self.server.users:
+            return
+        target_user = self.server.users[target]
+        target_user.send_notice(origin = self, text = text)
+
     def cmd_profiling(self, prefix: Optional[str]):
         import yappi
         stats = yappi.get_func_stats()
-        self.send_privmsg(origin = self.server.name,
+        self.send_notice(origin = self.server.name,
                           text = 'name\tncall\ttsub\ttot\ttavg')
         for row in stats:
-            self.send_privmsg(origin = self.server.name,
+            self.send_notice(origin = self.server.name,
                 text = '%s\t%s\t%s\t%s\t%s' % (row[12][-44:-1],
                                                format(row[4] / row[3], '.5f'),
                                                format(row[7], '.5f'),

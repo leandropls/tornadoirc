@@ -24,4 +24,5 @@ messages = {
     'CMD_PING':             'PING :%(servername)s',
     'CMD_PONG':             ':%(servername)s PONG %(servername)s :%(payload)s',
     'CMD_PRIVMSG':          ':%(originaddr)s PRIVMSG %(target)s :%(text)s',
+    'CMD_NOTICE':           ':%(originaddr)s NOTICE %(target)s :%(text)s',
 }
