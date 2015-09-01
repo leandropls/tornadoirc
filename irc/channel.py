@@ -82,6 +82,10 @@ class Channel(object):
 
     def send_privmsg(self, sender: str, recipient: str, text: str):
         '''Send PRIVMSG command to channel\'s users.'''
+        sendernick = sender.split('!')[0]
+        if sendernick not in self.users:
+            raise CannotSendToChanError()
+
         for nick in self.users:
             target = self.users[nick]['user']
             if target.address == sender:
@@ -91,6 +95,10 @@ class Channel(object):
 
     def send_notice(self, sender: str, recipient: str, text: str):
         '''Send NOTICE command to channel\'s users.'''
+        sendernick = sender.split('!')[0]
+        if sendernick not in self.users:
+            return
+
         for nick in self.users:
             target = self.users[nick]['user']
             if target.address == sender:
