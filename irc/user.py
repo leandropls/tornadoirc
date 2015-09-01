@@ -185,9 +185,9 @@ class User(object):
         if target not in self.server.router:
             return
         entity = self.server.router[target]
-        entity.send_privmsg(sender = self.address,
-                            recipient = target,
-                            text = text)
+        entity.send_notice(sender = self.address,
+                           recipient = target,
+                           text = text)
 
     def cmd_profiling(self):
         '''Process PROFILING command.'''
