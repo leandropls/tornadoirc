@@ -310,6 +310,16 @@ class User(object):
             channel = self.channels[name]
             channel.part(user = self, message = message)
 
+    @log_exceptions
+    def cmd_topic(self, channel: str, topic: Optional[str] = None):
+        '''Process TOPIC command.'''
+        if channel not in self.channels:
+            raise NotOnChannelError()
+        if topic == None:
+            self.channels[channel].send_topic(user = self)
+            return
+        self.channels[channel].set_topic(user = self, topic = topic)
+
     ##
     # RFC2812 - 3.4 Server queries and commands
     ##
