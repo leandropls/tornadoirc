@@ -33,6 +33,7 @@ messages = {
     'ERR_ALREADYREGISTRED': ':%(servername)s 462 %(target)s :You may not reregister',
 
     'CMD_ERROR':            'ERROR :Closing Link: %(ipaddr)s (%(text)s)',
+    'CMD_QUIT':             ':%(useraddr)s QUIT :%(message)s',
     'CMD_NICK':             ':%(oldaddr)s NICK :%(nick)s',
     'CMD_PING':             'PING :%(servername)s',
     'CMD_PONG':             ':%(servername)s PONG %(servername)s :%(payload)s',

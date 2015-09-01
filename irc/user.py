@@ -91,12 +91,7 @@ class User(object):
             io_loop.remove_timeout(self.timeouttimer)
             self.timeoutttimer = None
 
-        # Leave channels
-        channels = self.channels
-        channels = [channels[name] for name in channels]
-
-        for channel in channels:
-            channel.part(self, message = 'User has quit IRC.')
+        self.quit(message = 'Connection reset by peer.')
 
         # Remove nick from server catalog
         del self.server.users[self.nick]
@@ -123,9 +118,7 @@ class User(object):
 
     def timeout(self):
         '''Disconnect user for timeout.'''
-        self.send_message('CMD_ERROR', text = 'Ping timeout')
-        if not self.connection.stream.closed():
-            self.connection.stream.close()
+        self.quit(message = 'Ping timeout')
 
     def send_welcome(self):
         '''Send welcome messages to user.'''
@@ -155,6 +148,19 @@ class User(object):
                           sender = sender,
                           recipient = recipient,
                           text = text)
+
+    def quit(self, message: str = ''):
+        '''QUIT user (called by cmd_quit, ping timeout, conn reset etc).'''
+        # Leave channels
+        channels = self.channels
+        channels = [channels[name] for name in channels]
+
+        for channel in channels:
+            channel.quit(self, message = message)
+
+        # Close connection
+        self.send_message('CMD_ERROR', text = 'Quit: %s' % message)
+        self.connection.stream.close()
 
     ##
     # Server command handlers
@@ -211,10 +217,11 @@ class User(object):
                                                format(row[7], '.5f'),
                                                format(row[6], '.5f'),
                                                format(row[11], '.5f')))
+
     def cmd_quit(self, message: str = ''):
         '''Process QUIT command.'''
-        self.send_message('CMD_ERROR', text = 'Quit: %s' % message)
-        self.connection.stream.close()
+        message = 'Quit: %s' % message
+        self.quit(message)
 
     ##
     # RFC2812 - 3.2 Channel operations

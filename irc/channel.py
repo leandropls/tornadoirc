@@ -53,6 +53,18 @@ class Channel(object):
         del self.users[user.nick]
         del user.channels[self.name]
 
+    def quit(self, user: 'User', message: str = None):
+        '''Parts user from this channel.'''
+        if not message:
+            message = ''
+        self.broadcast_message('CMD_QUIT',
+                               useraddr = user.address,
+                               message = message)
+        if user.nick in self.users:
+            del self.users[user.nick]
+        if self.name in user.channels:
+            del user.channels[self.name]
+
     def set_topic(self, user: 'User', topic: str = ''):
         '''Sets channel topic.'''
         self.topic = topic
