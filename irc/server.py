@@ -63,14 +63,9 @@ class IRCTCPServer(TCPServer):
                                 server = self.ircserver)
         logger.info('Connection from %s', address[0])
         while True:
+            # Receive message
             try:
-                # Receive message
-                try:
-                    data = yield stream.read_until(b'\n', max_bytes = 512)
-                except StreamClosedError:
-                    connection.on_close()
-                    logger.info('Connection from %s closed.', address[0])
-                    return
+                data = yield stream.read_until(b'\n', max_bytes = 512)
                 data = data.decode('utf-8', 'ignore')
                 data = data.rstrip('\r\n')
 
@@ -100,6 +95,10 @@ class IRCTCPServer(TCPServer):
 
                 # Delgate handling of message
                 connection.on_read(prefix, command, params)
+            except StreamClosedError:
+                connection.on_close()
+                logger.info('Connection from %s closed.', address[0])
+                return
             except Exception as e:
                 error_desc = '(%s) %s' % (sys.exc_info()[0].__name__, str(e))
                 error_file = os.path.basename(sys.exc_info()[2].tb_frame.f_code.co_filename)
