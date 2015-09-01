@@ -1,7 +1,31 @@
 # coding: utf-8
 
-# setitem, getitem, contains, get, has_key, pop, setdefault, and update.
+import functools, sys, os
+from .exceptions import CommandError
+import logging
+
+logger = logging.getLogger('tornado.general')
+
+def log_exceptions(f):
+    '''Catch exception in method, format message and log it.'''
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except CommandError:
+            raise
+        except Exception as e:
+            error_type = sys.exc_info()[0].__name__
+            error_desc = str(e)
+            error_file = os.path.basename(sys.exc_info()[2].tb_next.tb_frame.f_code.co_filename)
+            error_line = sys.exc_info()[2].tb_next.tb_lineno
+            logger.info('Exception at %s (line: %s), %s: %s',
+                        error_file, error_line, error_type, error_desc)
+            return
+    return wrapper
+
 class LowerCaseDict(dict):
+    '''Dict compatible class that convert str keys to lower case keys.'''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for key in self:
