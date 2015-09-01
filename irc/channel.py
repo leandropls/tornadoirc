@@ -40,15 +40,18 @@ class Channel(object):
         self.send_topic(user)
         self.send_names(user)
 
-    def part(self, user: 'User', message: str = ''):
+    def part(self, user: 'User', message: str = None):
         '''Parts user from this channel.'''
-        if user.nick not in users:
+        if user.nick not in self.users:
             raise NotOnChannelError()
+        if not message:
+            message = ''
         self.broadcast_message('CMD_PART',
                                useraddr = user.address,
                                channel = self.name,
                                message = message)
-        del users[user.nick]
+        del self.users[user.nick]
+        del user.channels[self.name]
 
     def set_topic(self, user: 'User', topic: str = ''):
         '''Sets channel topic.'''
@@ -76,6 +79,25 @@ class Channel(object):
                           chantype = '=',
                           nicklist = nicklist)
         user.send_message('RPL_ENDOFNAMES', channel = self.name)
+
+    def send_privmsg(self, sender: str, recipient: str, text: str):
+        '''Send PRIVMSG command to channel\'s users.'''
+        for nick in self.users:
+            target = self.users[nick]['user']
+            if target.address == sender:
+                continue
+            target.send_privmsg(sender = sender, recipient = recipient,
+                                text = text)
+
+    def send_notice(self, sender: str, recipient: str, text: str):
+        '''Send NOTICE command to channel\'s users.'''
+        for nick in self.users:
+            target = self.users[nick]['user']
+            if target.address == sender:
+                continue
+            target.send_notice(sender = sender, recipient = recipient,
+                               text = text)
+
 
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''
