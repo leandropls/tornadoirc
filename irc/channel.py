@@ -13,6 +13,7 @@ class Channel(object):
     name = Undefined(str)
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
+    key = Undefined(Optional[str])
 
     def __init__(self, name: str, catalog: 'ChannelCatalog'):
         if not name or name[0] != '#':
@@ -21,6 +22,7 @@ class Channel(object):
         self.name = name
         self.topic = None
         self.users = LowerCaseDict()
+        self.key = None
 
     def broadcast_message(self, *args, **kwargs):
         '''Broadcast message to all channel members.'''
@@ -28,10 +30,12 @@ class Channel(object):
             target = self.users[nick]['user']
             target.send_message(*args, **kwargs)
 
-    def join(self, user: 'User'):
+    def join(self, user: 'User', key: Optional[str] = None):
         '''Joins user to this channel.'''
         if user.nick in self.users:
             return
+        if self.key and key and self.key != key:
+            raise BadChannelKeyError()
         self.users[user.nick] = {'user': user}
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
@@ -122,12 +126,17 @@ class Channel(object):
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''
 
-    def join(self, user: 'User', name: str):
+    def join(self, user: 'User', name: str, key: Optional[str] = None):
         '''Add an user to a channel. Returns channel.'''
+        # Create or get channel
         if name in self:
             channel = self[name]
         else:
             channel = Channel(name = name, catalog = self)
             self[name] = channel
-        channel.join(user)
-        return channel
+
+        # Join
+        if key:
+            channel.join(user = user, key = key)
+        else:
+            channel.join(user = user)

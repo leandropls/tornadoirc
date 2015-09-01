@@ -95,3 +95,10 @@ class AlreadyRegisteredError(CommandError):
         super().__init__()
         self.msgid = 'ERR_ALREADYREGISTRED'
         self.msgparams = {}
+
+class BadChannelKeyError(CommandError):
+    '''475 - Cannot join channel (+k)'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_BADCHANNELKEY'
+        self.msgparams = {'channel': channel}
