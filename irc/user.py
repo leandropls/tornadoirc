@@ -90,8 +90,15 @@ class User(object):
         if self.timeouttimer:
             io_loop.remove_timeout(self.timeouttimer)
             self.timeoutttimer = None
-        for name in self.channels:
-            self.channels[name].part(self, message = 'User has quit IRC.')
+
+        # Leave channels
+        channels = self.channels
+        channels = [channels[name] for name in channels]
+
+        for channel in channels:
+            channel.part(self, message = 'User has quit IRC.')
+
+        # Remove nick from server catalog
         del self.server.users[self.nick]
 
     ##
