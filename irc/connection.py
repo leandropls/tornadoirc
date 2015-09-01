@@ -56,7 +56,7 @@ class Connection(object):
     ##
     # Server initiated actions
     ##
-    def send_message(self, msgid: str, sender: Optional[str] = None, **params):
+    def send_message(self, msgid: str, **params):
         '''Send message to connection.'''
         params['servername'] = self.server.name
         params['target'] = self.user.nick if self.user else '*'
