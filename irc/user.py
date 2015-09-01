@@ -5,7 +5,7 @@ from .util import LowerCaseDict
 
 from tornado.ioloop import IOLoop
 
-from typing import Undefined, Optional, List
+from typing import Undefined, Optional, List, Tuple
 import logging
 import re
 
@@ -133,18 +133,18 @@ class User(object):
         self.cmd_motd()
         self.send_ping()
 
-    def send_privmsg(self, origin: str, text: str):
+    def send_privmsg(self, sender: str, recipient: str, text: str):
         '''Send PRIVMSG command to user.'''
-        originaddr = origin.address if hasattr(origin, 'address') else str(origin)
         self.send_message('CMD_PRIVMSG',
-                          originaddr = originaddr,
+                          sender = sender,
+                          recipient = recipient,
                           text = text)
 
-    def send_notice(self, origin: str, text: str):
+    def send_notice(self, sender: str, recipient: str, text: str):
         '''Send NOTICE command to user.'''
-        originaddr = origin.address if hasattr(origin, 'address') else str(origin)
         self.send_message('CMD_NOTICE',
-                          originaddr = originaddr,
+                          sender = sender,
+                          recipient = recipient,
                           text = text)
 
     ##
@@ -173,17 +173,21 @@ class User(object):
 
     def cmd_privmsg(self, target: str, text: str):
         '''Process PRIVMSG command.'''
-        if target not in self.server.users:
+        if target not in self.server.router:
             raise NoSuchNickError(nick = target)
-        target_user = self.server.users[target]
-        target_user.send_privmsg(origin = self, text = text)
+        entity = self.server.router[target]
+        entity.send_privmsg(sender = self.address,
+                            recipient = target,
+                            text = text)
 
     def cmd_notice(self, target: str, text: str):
         '''Process NOTICE command.'''
-        if target not in self.server.users:
+        if target not in self.server.router:
             return
-        target_user = self.server.users[target]
-        target_user.send_notice(origin = self, text = text)
+        entity = self.server.router[target]
+        entity.send_privmsg(sender = self.address,
+                            recipient = target,
+                            text = text)
 
     def cmd_profiling(self):
         '''Process PROFILING command.'''
@@ -206,13 +210,43 @@ class User(object):
     ##
     # RFC2812 - 3.2 Channel operations
     ##
-    def cmd_join(self, channel: str = '', *chanlist: List[str]):
+    def cmd_join(self, channel: str, *chanlist: Tuple[str]):
+        '''Process JOIN Command.'''
         chanlist = list(chanlist)
         chanlist.insert(0, channel)
         chancatalog = self.server.channels
         for name in chanlist:
-            chancatalog.join(user = self, name = name)
+            if not name:
+                continue
+            chancatalog.join(user = self, name = name.split(',')[0])
 
+    def cmd_part(self, channel: str, *params: Tuple[str]):
+        '''Process PART command.'''
+        params = list(params)
+        params.insert(0, channel)
+
+        # Separate message and channels
+        message = None
+        chanlist = []
+        addmessage = False
+        for par in params:
+            logger.info(par)
+            if not par:
+                continue
+            if par[-1] == ',':
+                addmessage = True
+            if not addmessage:
+                chanlist.append(par)
+            else:
+                message = par
+                break
+
+        # Part channels
+        for name in chanlist:
+            if name not in self.channels:
+                raise NotOnChannelError(channel = name)
+            channel = self.channels[name]
+            channel.part(self, message)
 
     ##
     # RFC2812 - 3.4 Server queries and commands
