@@ -61,6 +61,13 @@ class NoSuchChannelError(CommandError):
         self.msgid = 'ERR_NOSUCHCHANNEL'
         self.msgparams = {'channel': channel}
 
+class CannotSendToChanError(CommandError):
+    '''404 - Cannot send to channel'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_CANNOTSENDTOCHAN'
+        self.msgparams = {'channel': channel}
+
 class NoMotdError(CommandError):
     '''422 - You may not reregister'''
     def __init__(self):

@@ -22,6 +22,7 @@ messages = {
     'ERR_NOSUCHNICK':       ':%(servername)s 401 %(target)s %(nick)s :No such nick/channel',
     'ERR_NOSUCHSERVER':     ':%(servername)s 402 %(target)s %(servername)s :No such server',
     'ERR_NOSUCHCHANNEL':    ':%(servername)s 403 %(target)s %(channel)s :No such channel',
+    'ERR_CANNOTSENDTOCHAN': ':%(servername)s 404 %(target)s %(channel)s :Cannot send to channel',
     'ERR_NOMOTD':           ':%(servername)s 422 %(target)s :MOTD File is missing',
     'ERR_NONICKNAMEGIVEN':  ':%(servername)s 431 %(target)s :No nickname given',
     'ERR_ERRONEUSNICKNAME': ':%(servername)s 432 %(target)s %(nick)s :Erroneus nickname',
