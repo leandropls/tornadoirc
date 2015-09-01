@@ -3,6 +3,7 @@
 from .connection import Connection
 from .util import LowerCaseDict
 from .channel import ChannelCatalog
+from .router import EntityRouter
 
 from tornado.tcpserver import TCPServer
 from tornado import gen
@@ -27,6 +28,7 @@ class IRCServer(object):
     channelmodes = ''
     users = Undefined(dict)
     channels = Undefined(ChannelCatalog)
+    router = Undefined(EntityRouter)
 
     def __init__(self, settings):
         self.tcpserver = IRCTCPServer(self)
@@ -35,6 +37,8 @@ class IRCServer(object):
         self.date = settings['date']
         self.users = LowerCaseDict()
         self.channels = ChannelCatalog()
+        self.router = EntityRouter(('',  self.users),
+                                   ('#', self.channels))
 
     def listen(self, *args, **kwargs):
         '''Listen to address and port.'''
