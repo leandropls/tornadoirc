@@ -4,6 +4,9 @@ from .util import LowerCaseDict
 from .exceptions import *
 
 from typing import Undefined, Optional
+import logging
+
+logger = logging.getLogger('tornado.general')
 
 class Channel(object):
     '''IRC channel'''
@@ -80,5 +83,6 @@ class ChannelCatalog(LowerCaseDict):
             channel = self[name]
         else:
             channel = Channel(name = name, catalog = self)
+            self[name] = channel
         channel.join(user)
         return channel
