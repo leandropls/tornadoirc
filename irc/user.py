@@ -210,11 +210,6 @@ class User(object):
                                                format(row[6], '.5f'),
                                                format(row[11], '.5f')))
 
-    def cmd_quit(self, message: str = ''):
-        '''Process QUIT command.'''
-        message = 'Quit: %s' % message
-        self.quit(message)
-
     ##
     # RFC2812 - 3.1 Connection registration
     ##
@@ -272,46 +267,48 @@ class User(object):
         self.send_message('CMD_MODE', sender = self.nick,
                           recipient = self.nick, mode = action)
 
+    def cmd_quit(self, message: str = ''):
+        '''Process QUIT command.'''
+        message = 'Quit: %s' % message
+        self.quit(message)
+
     ##
     # RFC2812 - 3.2 Channel operations
     ##
-    def cmd_join(self, channel: str, *chanlist: Tuple[str]):
+    @log_exceptions
+    def cmd_join(self, channels: str, keys: Optional[str] = None):
         '''Process JOIN Command.'''
-        chanlist = list(chanlist)
-        chanlist.insert(0, channel)
+        if channels == '0':
+            channels = [name for name in self.channels]
+            channels = ','.join(channels)
+            self.cmd_part(channels)
+            return
+
+        channels = channels.split(',')
+        keys = keys.split(',') if keys else []
         chancatalog = self.server.channels
-        for name in chanlist:
+
+        # czipk = [('#chan1', 'key1'), ('#chan2', None), ...]
+        czipk = zip(channels, keys + [None for _ in range(max(0, len(channels) - len(keys)))])
+        for name, key in czipk:
             if not name:
                 continue
-            chancatalog.join(user = self, name = name.split(',')[0])
-
-    def cmd_part(self, channel: str, *params: Tuple[str]):
-        '''Process PART command.'''
-        params = list(params)
-        params.insert(0, channel)
-
-        # Separate message and channels
-        message = None
-        chanlist = []
-        addmessage = False
-        for par in params:
-            logger.info(par)
-            if not par:
-                continue
-            if par[-1] == ',':
-                addmessage = True
-            if not addmessage:
-                chanlist.append(par)
+            if key:
+                chancatalog.join(user = self, name = name, key = key)
             else:
-                message = par
-                break
+                chancatalog.join(user = self, name = name)
+
+    @log_exceptions
+    def cmd_part(self, channels: str, message: Optional[str] = None):
+        '''Process PART command.'''
+        channels = channels.split(',')
 
         # Part channels
-        for name in chanlist:
+        for name in channels:
             if name not in self.channels:
                 raise NotOnChannelError(channel = name)
             channel = self.channels[name]
-            channel.part(self, message)
+            channel.part(user = self, message = message)
 
     ##
     # RFC2812 - 3.4 Server queries and commands
