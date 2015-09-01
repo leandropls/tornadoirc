@@ -58,6 +58,8 @@ class Connection(object):
     ##
     def send_message(self, msgid: str, **params):
         '''Send message to connection.'''
+        if self.stream.closed():
+            return
         params['servername'] = self.server.name
         params['target'] = self.user.nick if self.user else '*'
         params['targetaddr'] = self.user.address if self.user else '*'
