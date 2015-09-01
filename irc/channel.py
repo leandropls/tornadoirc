@@ -30,7 +30,10 @@ class Channel(object):
 
     def join(self, user: 'User'):
         '''Joins user to this channel.'''
+        if user.nick in self.users:
+            return
         self.users[user.nick] = {'user': user}
+        user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
                                useraddr = user.address,
                                channel = self.name)

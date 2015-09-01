@@ -211,10 +211,8 @@ class User(object):
         chanlist.insert(0, channel)
         chancatalog = self.server.channels
         for name in chanlist:
-            if name in self.channels:
-                continue
-            chanref = chancatalog.join(user = self, name = name)
-            self.channels[name] = chanref
+            chancatalog.join(user = self, name = name)
+
 
     ##
     # RFC2812 - 3.4 Server queries and commands
