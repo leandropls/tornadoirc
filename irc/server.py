@@ -24,7 +24,9 @@ class IRCServer(object):
     name = Undefined(str)
     date = Undefined(str)
     version = 'tornadoirc-0.0'
-    usermodes = ''
+    usermodes = 'aiwroO'
+    usermodes_restricted_add = 'aoO'
+    usermodes_restricted_rem = 'ar'
     channelmodes = ''
     users = Undefined(dict)
     channels = Undefined(ChannelCatalog)

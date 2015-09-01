@@ -5,6 +5,7 @@ messages = {
     'RPL_YOURHOST':         ':%(servername)s 002 %(target)s :Your host is %(servername)s, running version %(version)s',
     'RPL_CREATED':          ':%(servername)s 003 %(target)s :This server was created %(date)s',
     'RPL_MYINFO':           ':%(servername)s 004 %(target)s :%(servername)s %(version)s %(usermodes)s %(channelmodes)s',
+    'RPL_UMODEIS':          ':%(servername)s 221 %(target)s :%(modes)s',
     'RPL_LUSERCLIENT':      ':%(servername)s 251 %(target)s :There are %(usercount)s users and %(servicescount)s services on %(serverscount)s servers',
     'RPL_LUSERME':          ':%(servername)s 255 %(target)s :I have %(usercount)s clients and %(serverscount)s servers',
     'RPL_ISON':             ':%(servername)s 303 %(target)s :%(nicklist)s',
@@ -42,4 +43,5 @@ messages = {
     'CMD_JOIN':             ':%(useraddr)s JOIN %(channel)s',
     'CMD_PART':             ':%(useraddr)s PART %(channel)s :%(message)s',
     'CMD_TOPIC':            ':%(useraddr)s TOPIC %(channel)s :%(topic)s',
+    'CMD_MODE':             ':%(sender)s MODE %(recipient)s :%(modes)s',
 }

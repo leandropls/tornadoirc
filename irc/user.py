@@ -2,6 +2,7 @@
 
 from .exceptions import *
 from .util import LowerCaseDict
+from .util import log_exceptions
 
 from tornado.ioloop import IOLoop
 
@@ -23,6 +24,7 @@ class User(object):
     channels = Undefined(LowerCaseDict)
     pingtimer = None
     timeouttimer = None
+    modes = Undefined(set)
 
     ##
     # Nick getter and setter
@@ -72,6 +74,7 @@ class User(object):
         self.servername = servername
         self.realname = realname
         self.channels = LowerCaseDict()
+        self.modes = set()
 
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
@@ -175,17 +178,6 @@ class User(object):
         IOLoop.current().remove_timeout(self.timeouttimer)
         self.timeouttimer = None
 
-    def cmd_nick(self, nick: str):
-        '''Process NICK command.'''
-        oldaddr = self.address
-        oldnick = self.nick
-        self.nick = nick
-        if self.nick.lower() != oldnick.lower():
-            self.server.users[self.nick] = self
-            del self.server.users[oldnick]
-
-        self.send_message('CMD_NICK', oldaddr = oldaddr, nick = self.nick)
-
     def cmd_privmsg(self, target: str, text: str):
         '''Process PRIVMSG command.'''
         if target not in self.server.router:
@@ -222,6 +214,63 @@ class User(object):
         '''Process QUIT command.'''
         message = 'Quit: %s' % message
         self.quit(message)
+
+    ##
+    # RFC2812 - 3.1 Connection registration
+    ##
+    def cmd_nick(self, nick: str):
+        '''Process NICK command.'''
+        oldaddr = self.address
+        oldnick = self.nick
+        self.nick = nick
+        if self.nick.lower() != oldnick.lower():
+            self.server.users[self.nick] = self
+            del self.server.users[oldnick]
+
+        self.send_message('CMD_NICK', oldaddr = oldaddr, nick = self.nick)
+
+    @log_exceptions
+    def cmd_mode(self, target: str, modes: Optional[str] = None):
+        '''Process MODE command.'''
+        if target.lower() != self.nick.lower():
+            return
+
+        if not modes:
+            self.send_message('RPL_UMODEIS', modes = ''.join(self.modes))
+            return
+
+        add = True
+        usermodes = self.server.usermodes
+        usermodes_restricted_add = self.server.usermodes_restricted_add
+        usermodes_restricted_rem = self.server.usermodes_restricted_rem
+        added = set()
+        removed = set()
+        for m in modes:
+            if m == '+':
+                add = True
+                continue
+            if m == '-':
+                add = False
+                continue
+            if m in usermodes:
+                if add and m not in usermodes_restricted_add:
+                    if m not in self.modes:
+                        self.modes.add(m)
+                        added.add(m)
+                        if m in removed:
+                            removed.remove(m)
+                if not add and m not in usermodes_restricted_add:
+                    if m in self.modes:
+                        self.modes.remove(m)
+                        removed.add(m)
+                        if m in added:
+                            added.remove(m)
+        added = ''.join(added)
+        removed = ''.join(removed)
+        action = ('+%s' % added) if added else ''
+        action += ('-%s' % removed) if removed else ''
+        self.send_message('CMD_MODE', sender = self.nick,
+                          recipient = self.nick, mode = action)
 
     ##
     # RFC2812 - 3.2 Channel operations
