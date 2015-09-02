@@ -1,7 +1,9 @@
 # coding: utf-8
 
-import functools, sys, os
 from .exceptions import CommandError
+
+from inspect import signature
+import functools, sys, os
 import logging
 
 logger = logging.getLogger('tornado.general')
@@ -22,6 +24,8 @@ def log_exceptions(f):
             logger.info('Exception at %s (line: %s), %s: %s',
                         error_file, error_line, error_type, error_desc)
             return
+
+    wrapper.__signature__ = signature(f)
     return wrapper
 
 class LowerCaseDict(dict):
