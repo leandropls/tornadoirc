@@ -1,6 +1,6 @@
 # coding: utf-8
 
-from .util import LowerCaseDict
+from .util import LowerCaseDict, log_exceptions
 from .exceptions import *
 
 from typing import Undefined, Optional
@@ -10,11 +10,19 @@ logger = logging.getLogger('tornado.general')
 
 class Channel(object):
     '''IRC channel'''
-    name = Undefined(str)
+    _name = Undefined(str)
     catalog = Undefined('ChannelCatalog')
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
     key = Undefined(Optional[str])
+
+    @property
+    def channel(self):
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value
 
     def __init__(self, name: str, catalog: 'ChannelCatalog'):
         if not name or name[0] != '#':
@@ -92,15 +100,31 @@ class Channel(object):
         else:
             user.send_message('RPL_NOTOPIC', channel = self.name)
 
+    @log_exceptions
     def send_names(self, user: 'User', suppress_end = False):
         '''Send current channel members nicks to user.'''
         users = self.users
         nicklist = [users[nick]['user'].nick for nick in users]
-        nicklist = ' '.join(nicklist)
-        user.send_message('RPL_NAMREPLY',
-                          channel = self.name,
-                          chantype = '=',
-                          nicklist = nicklist)
+        nicklist_str = ' '.join(nicklist)
+        try:
+            user.send_message('RPL_NAMREPLY',
+                              channel = self.name,
+                              chantype = '=',
+                              nicklist = nicklist_str)
+        except TooLongMessageException as e:
+            length = e.length
+            baselen = length - len(nicklist_str.encode('utf-8'))
+            maxnicks = (512 - baselen) // user.server.settings['nicklen']
+            if maxnicks <= 0:
+                raise
+            for i in range(0, len(nicklist) // maxnicks + 1):
+                nicklist_str = ' '.join(nicklist[maxnicks * i:maxnicks * i + maxnicks])
+                user.send_message('RPL_NAMREPLY',
+                                  channel = self.name,
+                                  chantype = '=',
+                                  nicklist = nicklist_str)
+                start = maxnicks
+
         if not suppress_end:
             user.send_message('RPL_ENDOFNAMES', channel = self.name)
 

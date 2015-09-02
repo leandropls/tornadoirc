@@ -2,6 +2,11 @@
 
 from typing import Undefined
 
+class TooLongMessageException(Exception):
+    length = None
+    def __init__(self, length):
+        self.length = length
+
 class CommandError(Exception):
     msgid = Undefined(str)
     msgparams = Undefined(dict)

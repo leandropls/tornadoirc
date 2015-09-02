@@ -76,6 +76,8 @@ class Connection(object):
 
         message = messages[msgid] % params + '\r\n'
         message = message.encode('utf-8')
+        if len(message) > 512:
+            raise TooLongMessageException(length = len(message))
         self.stream.write(message)
 
     def register_user(self):
