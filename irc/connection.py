@@ -9,6 +9,7 @@ from tornado.iostream import IOStream
 from typing import Undefined, List, Optional, Callable
 import logging
 import inspect
+import time
 
 logger = logging.getLogger('tornado.general')
 
@@ -40,6 +41,7 @@ class Connection(object):
         methodname = 'cmd_%s' % command.lower()
 
         # Process command
+        t0 = time.monotonic()
         try:
             if self.user and hasattr(self.user, methodname):
                 self._call_user_method(command, params)
@@ -47,6 +49,13 @@ class Connection(object):
                 self._call_conn_method(prefix, command, params)
         except CommandError as e:
             self.send_message(msgid = e.msgid, **e.msgparams)
+        finally:
+            t1 = time.monotonic()
+            elapsed = format((t1 - t0) * 1e3, '.2f')
+            client = (self.user.address
+                     if self.user
+                     else '%s:%s' % (self.address, self.port))
+            logger.info('%s %s %sms', client, command.upper(), elapsed)
 
     def on_close(self):
         '''Deals with a connection closed event.'''
