@@ -341,6 +341,21 @@ class User(object):
         self.send_message('RPL_ENDOFNAMES',
                           channel = channels if channels else '*')
 
+    @log_exceptions
+    def cmd_list(self, channels: Optional[str] = None,
+                 target: Optional[str] = None):
+        '''Process LIST command.
+
+        This method violates RFC2812 in the sense that it always sends 0
+        as the number of visible members of the channel.
+        '''
+        chancatalog = self.server.channels
+        for name in chancatalog:
+            topic = chancatalog[name].topic
+            self.send_message('RPL_LIST', channel = name, visible = 0,
+                              topic = topic if topic else '')
+        self.send_message('RPL_LISTEND')
+
     ##
     # RFC2812 - 3.4 Server queries and commands
     ##
