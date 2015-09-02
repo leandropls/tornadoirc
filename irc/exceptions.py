@@ -49,10 +49,10 @@ class NoSuchNickError(CommandError):
 
 class NoSuchServerError(CommandError):
     '''402 - No such server'''
-    def __init__(self, servername: str):
+    def __init__(self, server: str):
         super().__init__()
         self.msgid = 'ERR_NOSUCHSERVER'
-        self.msgparams = {'servername': servername}
+        self.msgparams = {'server': server}
 
 class NoSuchChannelError(CommandError):
     '''403 - No such channel'''

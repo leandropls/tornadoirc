@@ -171,7 +171,7 @@ class User(object):
     def cmd_ping(self, payload: str, destination: Optional[str] = None):
         '''Process PING command.'''
         if destination and destination != self.server.name:
-            raise NoSuchServerError(servername = destination)
+            raise NoSuchServerError(server = destination)
         self.send_message('CMD_PONG', payload = payload)
 
     def cmd_pong(self, payload: str):
@@ -378,6 +378,16 @@ class User(object):
         self.send_message('RPL_LUSERME',
                           usercount = len(self.server.users),
                           serverscount = 0)
+
+    def cmd_version(self, target: Optional[str] = None):
+        '''Process VERSION command.'''
+        if target != None and target != self.server.name:
+            raise NoSuchServerError(server = target)
+
+        self.send_message('RPL_VERSION',
+                          version = self.server.version,
+                          servername = self.server.name,
+                          comments = '')
 
     ##
     # RFC2812 - 3.6 User based queries

@@ -16,6 +16,7 @@ messages = {
     'RPL_LISTEND':          ':%(servername)s 323 %(target)s :End of LIST',
     'RPL_NOTOPIC':          ':%(servername)s 331 %(target)s %(channel)s :No topic is set',
     'RPL_TOPIC':            ':%(servername)s 332 %(target)s %(channel)s :%(topic)s',
+    'RPL_VERSION':          ':%(servername)s 351 %(target)s %(version)s %(servername)s :%(comments)s',
     'RPL_NAMREPLY':         ':%(servername)s 353 %(target)s %(chantype)s %(channel)s :%(nicklist)s',
     'RPL_ENDOFNAMES':       ':%(servername)s 366 %(target)s %(channel)s :End of NAMES list',
     'RPL_MOTD':             ':%(servername)s 372 %(target)s :- %(text)s',
@@ -23,7 +24,7 @@ messages = {
     'RPL_ENDOFMOTD':        ':%(servername)s 376 %(target)s :End of MOTD command',
 
     'ERR_NOSUCHNICK':       ':%(servername)s 401 %(target)s %(nick)s :No such nick/channel',
-    'ERR_NOSUCHSERVER':     ':%(servername)s 402 %(target)s %(servername)s :No such server',
+    'ERR_NOSUCHSERVER':     ':%(servername)s 402 %(target)s %(server)s :No such server',
     'ERR_NOSUCHCHANNEL':    ':%(servername)s 403 %(target)s %(channel)s :No such channel',
     'ERR_CANNOTSENDTOCHAN': ':%(servername)s 404 %(target)s %(channel)s :Cannot send to channel',
     'ERR_NOMOTD':           ':%(servername)s 422 %(target)s :MOTD File is missing',
