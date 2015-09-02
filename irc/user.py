@@ -320,6 +320,27 @@ class User(object):
             return
         self.channels[channel].set_topic(user = self, topic = topic)
 
+    @log_exceptions
+    def cmd_names(self, channels: Optional[str] = None,
+                  target: Optional[str] = None):
+        '''Process NAMES command.
+
+        This method violates RFC2812 in the sense that it only sends
+        the names list for channels in which the user are. This is done
+        out of lazyness and performance concerns.
+        '''
+        userchannels = self.channels
+        if not channels:
+            chanlist = list(userchannels.keys())
+        else:
+            chanlist = channels.split(',')
+
+        for name in chanlist:
+            if name in userchannels:
+                userchannels[name].send_names(user = self, suppress_end = True)
+        self.send_message('RPL_ENDOFNAMES',
+                          channel = channels if channels else '*')
+
     ##
     # RFC2812 - 3.4 Server queries and commands
     ##

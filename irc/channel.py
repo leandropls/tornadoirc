@@ -92,7 +92,7 @@ class Channel(object):
         else:
             user.send_message('RPL_NOTOPIC', channel = self.name)
 
-    def send_names(self, user: 'User'):
+    def send_names(self, user: 'User', suppress_end = False):
         '''Send current channel members nicks to user.'''
         users = self.users
         nicklist = [users[nick]['user'].nick for nick in users]
@@ -101,7 +101,8 @@ class Channel(object):
                           channel = self.name,
                           chantype = '=',
                           nicklist = nicklist)
-        user.send_message('RPL_ENDOFNAMES', channel = self.name)
+        if not suppress_end:
+            user.send_message('RPL_ENDOFNAMES', channel = self.name)
 
     def send_privmsg(self, sender: str, recipient: str, text: str):
         '''Send PRIVMSG command to channel\'s users.'''
