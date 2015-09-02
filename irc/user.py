@@ -314,7 +314,7 @@ class User(object):
     def cmd_topic(self, channel: str, topic: Optional[str] = None):
         '''Process TOPIC command.'''
         if channel not in self.channels:
-            raise NotOnChannelError()
+            raise NotOnChannelError(channel = channel)
         if topic == None:
             self.channels[channel].send_topic(user = self)
             return
