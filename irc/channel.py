@@ -11,6 +11,7 @@ logger = logging.getLogger('tornado.general')
 class Channel(object):
     '''IRC channel'''
     name = Undefined(str)
+    catalog = Undefined('ChannelCatalog')
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
     key = Undefined(Optional[str])
@@ -20,6 +21,7 @@ class Channel(object):
             raise NoSuchChannelError(channel = name)
 
         self.name = name
+        self.catalog = catalog
         self.topic = None
         self.users = LowerCaseDict()
         self.key = None
@@ -56,6 +58,11 @@ class Channel(object):
                                message = message)
         del self.users[user.nick]
         del user.channels[self.name]
+
+        if len(self.users) == 0:
+            catalog = self.catalog
+            self.catalog = None
+            del catalog[self.name]
 
     def quit(self, user: 'User', message: str = None):
         '''Parts user from this channel.'''
