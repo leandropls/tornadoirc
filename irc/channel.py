@@ -15,6 +15,7 @@ class Channel(object):
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
     key = Undefined(Optional[str])
+    _limit = Undefined(int)
 
     @property
     def channel(self):
@@ -23,6 +24,15 @@ class Channel(object):
     @channel.setter
     def channel(self, value):
         self._channel = value
+
+    @property
+    def limit(self):
+        return self._limit
+
+    @limit.setter
+    def limit(self, value):
+        chanlimit = self.catalog.server.settings['chanlimit']
+        self._limit = min(self.server_chanlimit, value)
 
     def __init__(self, name: str, catalog: 'ChannelCatalog'):
         if not name or name[0] != '#':
@@ -33,6 +43,7 @@ class Channel(object):
         self.topic = None
         self.users = LowerCaseDict()
         self.key = None
+        self._limit = catalog.server.settings['chanlimit']
 
     def broadcast_message(self, *args, **kwargs):
         '''Broadcast message to all channel members.'''
@@ -46,6 +57,9 @@ class Channel(object):
             return
         if self.key and key and self.key != key:
             raise BadChannelKeyError()
+        if len(self.users) >= self.limit:
+            raise ChannelIsFullError(channel = self.name)
+
         self.users[user.nick] = {'user': user}
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
@@ -71,6 +85,7 @@ class Channel(object):
             catalog = self.catalog
             self.catalog = None
             del catalog[self.name]
+            self.server = None
 
     def quit(self, user: 'User', message: str = None):
         '''Parts user from this channel.'''
@@ -157,6 +172,11 @@ class Channel(object):
 
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''
+    server = Undefined('Server')
+
+    def __init__(self, server: 'Server', *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.server = server
 
     def join(self, user: 'User', name: str, key: Optional[str] = None):
         '''Add an user to a channel. Returns channel.'''

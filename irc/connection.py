@@ -5,6 +5,7 @@ from .messages import messages
 from .exceptions import *
 
 from tornado.iostream import IOStream
+from tornado.ioloop import IOLoop
 
 from typing import Undefined, List, Optional, Callable
 import logging
@@ -20,6 +21,9 @@ class Connection(object):
     server = Undefined('Server')
     password = Undefined(Optional[str])
     user = Undefined(Optional[User])
+    req_user = None
+    req_nick = None
+    regtimer = None
 
     def __init__(self, stream: IOStream, server: 'Server',
                  address: str, port: int):
@@ -29,8 +33,11 @@ class Connection(object):
         self.server = server
         self.password = None
         self.user = None
-        self.req_user = None
-        self.req_nick = None
+
+        # Set timeout for registering
+        self.regtimer = IOLoop.current().call_later(
+                            self.server.settings['pingtimeout'],
+                            self.stream.close)
 
     ##
     # Events
@@ -97,6 +104,13 @@ class Connection(object):
         self.req_nick = None
         self.req_user = None
         self.server.users[self.user.nick] = self.user
+
+        # Remove register timeout timer
+        if self.regtimer:
+            IOLoop.current().remove_timeout(self.regtimer)
+            self.regtimer = None
+
+        # Call user on_register event
         self.user.on_register()
 
     ##

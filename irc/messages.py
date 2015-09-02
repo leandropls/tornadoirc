@@ -35,6 +35,7 @@ messages = {
     'ERR_NOTONCHANNEL':     ':%(servername)s 442 %(target)s %(channel)s :You\'re not on that channel',
     'ERR_NEEDMOREPARAMS':   ':%(servername)s 461 %(target)s %(command)s :Not enough parameters',
     'ERR_ALREADYREGISTRED': ':%(servername)s 462 %(target)s :You may not reregister',
+    'ERR_CHANNELISFULL':    ':%(servername)s 471 %(target)s %(channel)s :Cannot join channel (+l)',
     'ERR_BADCHANNELKEY':    ':%(servername)s 475 %(target)s %(channel)s :Cannot join channel (+k)',
 
     'CMD_ERROR':            'ERROR :Closing Link: %(ipaddr)s (%(text)s)',

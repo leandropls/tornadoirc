@@ -38,7 +38,7 @@ class IRCServer(object):
         self.name = settings['name']
         self.date = settings['date']
         self.users = LowerCaseDict()
-        self.channels = ChannelCatalog()
+        self.channels = ChannelCatalog(server = self)
         self.router = EntityRouter(('',  self.users),
                                    ('#', self.channels))
 

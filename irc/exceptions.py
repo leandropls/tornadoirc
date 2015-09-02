@@ -101,6 +101,13 @@ class AlreadyRegisteredError(CommandError):
         self.msgid = 'ERR_ALREADYREGISTRED'
         self.msgparams = {}
 
+class ChannelIsFullError(CommandError):
+    '''471 - Cannot join channel (+l)'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_CHANNELISFULL'
+        self.msgparams = {'channel': channel}
+
 class BadChannelKeyError(CommandError):
     '''475 - Cannot join channel (+k)'''
     def __init__(self, channel: str):

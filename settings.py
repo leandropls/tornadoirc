@@ -26,6 +26,7 @@ ircd = {
     'nicklen': 30,
     'pinginterval': 120,
     'pingtimeout': 60,
+    'chanlimit': 100,
 }
 
 ##
