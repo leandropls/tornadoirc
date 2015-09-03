@@ -13,13 +13,14 @@ import re
 logger = logging.getLogger('tornado.general')
 
 ModeTuple = namedtuple('ModeTuple', ['author', 'timestamp'])
+UserTuple = namedtuple('UserTuple', ['user'])
 
 class Channel(object):
     '''IRC channel'''
     name = Undefined(str)
     catalog = Undefined('ChannelCatalog')
     topic = Undefined(Optional[str])
-    users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
+    users = Undefined(LowerCaseDict) # users = {'nick': UserTuple}
     key = Undefined(Optional[str])
     banlist = Undefined(Dict[str, ModeTuple])
     invlist = Undefined(Dict[str, ModeTuple])
@@ -77,7 +78,7 @@ class Channel(object):
     def broadcast_message(self, *args, **kwargs):
         '''Broadcast message to all channel members.'''
         for nick in self.users:
-            target = self.users[nick]['user']
+            target = self.users[nick].user
             target.send_message(*args, **kwargs)
 
     def join(self, user: 'User', key: Optional[str] = None):
@@ -102,7 +103,7 @@ class Channel(object):
                 raise BannedFromChanError(channel = self.name)
 
         # Join user
-        self.users[user.nick] = {'user': user}
+        self.users[user.nick] = UserTuple(user = user)
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
                                useraddr = user.address,
@@ -161,7 +162,7 @@ class Channel(object):
     def send_names(self, user: 'User', suppress_end = False):
         '''Send current channel members nicks to user.'''
         users = self.users
-        nicklist = [users[nick]['user'].nick for nick in users]
+        nicklist = [users[nick].user.nick for nick in users]
         nicklist_str = ' '.join(nicklist)
         try:
             user.send_message('RPL_NAMREPLY',
@@ -192,7 +193,7 @@ class Channel(object):
             raise CannotSendToChanError()
 
         for nick in self.users:
-            target = self.users[nick]['user']
+            target = self.users[nick].user
             if target.address == sender:
                 continue
             target.send_privmsg(sender = sender, recipient = recipient,
@@ -205,7 +206,7 @@ class Channel(object):
             return
 
         for nick in self.users:
-            target = self.users[nick]['user']
+            target = self.users[nick].user
             if target.address == sender:
                 continue
             target.send_notice(sender = sender, recipient = recipient,
