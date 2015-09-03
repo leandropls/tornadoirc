@@ -42,8 +42,8 @@ Run:
 (DigitalOcean $5/mon virtual server)
 
 ### Code
-Commit: 33d765559a09fa3b9c2f155df20c3dc9189414ed
-Date: Wed Sep 2 23:06:14 2015 -0300
+* Commit: 33d765559a09fa3b9c2f155df20c3dc9189414ed
+* Date: Wed Sep 2 23:06:14 2015 -0300
 
 ### Conditions
 * Users: 4500
