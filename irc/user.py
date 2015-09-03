@@ -7,6 +7,7 @@ from .util import log_exceptions
 from tornado.ioloop import IOLoop
 
 from typing import Undefined, Optional, List, Tuple
+from random import randint
 import logging
 import re
 
@@ -106,18 +107,37 @@ class User(object):
         '''Send message to user.'''
         self.connection.send_message(*args, **kwargs)
 
+    def schedule_ping(self):
+        io_loop = IOLoop.current()
+
+        # Disable previous timers
+        if self.pingtimer:
+            io_loop.remove_timeout(self.pingtimer)
+
+        interval = self.server.settings['pinginterval']
+        interval = randint(0.5 * interval, 1.5 * interval)
+        self.pingtimer = io_loop.call_later(
+                            interval,
+                            self.send_ping)
+
     def send_ping(self):
         '''Send PING to user'''
         if self.connection.stream.closed():
             return
         io_loop = IOLoop.current()
-        self.pingtimer = io_loop.call_later(
-                            self.server.settings['pinginterval'],
-                            self.send_ping)
-        self.timeouttimer = io_loop.call_later(
-                                self.server.settings['pingtimeout'],
-                                self.timeout)
+
+        # Disable previous timeouts
+        if self.timeouttimer:
+            io_loop.remove_timeout(self.timeouttimer)
+
+        # Send PING
         self.send_message('CMD_PING')
+
+        # Setup timeout timer
+        timeout = self.server.settings['pingtimeout']
+        self.timeouttimer = io_loop.call_later(
+                                timeout,
+                                self.timeout)
 
     def timeout(self):
         '''Disconnect user for timeout.'''
@@ -136,7 +156,7 @@ class User(object):
 
         self.cmd_lusers()
         self.cmd_motd()
-        self.send_ping()
+        self.schedule_ping()
 
     def send_privmsg(self, sender: str, recipient: str, text: str):
         '''Send PRIVMSG command to user.'''
@@ -175,8 +195,10 @@ class User(object):
         self.send_message('CMD_PONG', payload = payload)
 
     def cmd_pong(self, payload: str):
-        IOLoop.current().remove_timeout(self.timeouttimer)
-        self.timeouttimer = None
+        if self.timeouttimer:
+            IOLoop.current().remove_timeout(self.timeouttimer)
+            self.timeouttimer = None
+        self.schedule_ping()
 
     def cmd_privmsg(self, target: str, text: str):
         '''Process PRIVMSG command.'''
