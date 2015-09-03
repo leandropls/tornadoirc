@@ -5,25 +5,19 @@ from .exceptions import *
 
 from typing import Undefined, Optional
 import logging
+import re
 
 logger = logging.getLogger('tornado.general')
 
 class Channel(object):
     '''IRC channel'''
-    _name = Undefined(str)
+    name = Undefined(str)
     catalog = Undefined('ChannelCatalog')
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
     key = Undefined(Optional[str])
     _limit = Undefined(int)
-
-    @property
-    def channel(self):
-        return self._channel
-
-    @channel.setter
-    def channel(self, value):
-        self._channel = value
+    _name_regex = re.compile(r'^#\w+$')
 
     @property
     def limit(self):
@@ -35,15 +29,21 @@ class Channel(object):
         self._limit = min(chanlimit, value)
 
     def __init__(self, name: str, catalog: 'ChannelCatalog'):
-        if not name or name[0] != '#':
-            raise NoSuchChannelError(channel = name)
-
-        self.name = name
+        chanlen_max = catalog.server.settings['chanlen']
+        self.set_name(value = name, chanlen_max = chanlen_max)
         self.catalog = catalog
         self.topic = None
         self.users = LowerCaseDict()
         self.key = None
         self._limit = catalog.server.settings['chanlimit']
+
+    def set_name(self, value: str, chanlen_max: int):
+        '''Set channel name. Raise exception if it\'s invalid.'''
+        if not self._name_regex.match(value):
+            raise NoSuchChannelError(channel = value)
+        if len(value.encode('utf-8')) > chanlen_max:
+            raise NoSuchChannelError(channel = value)
+        self.name = value
 
     def broadcast_message(self, *args, **kwargs):
         '''Broadcast message to all channel members.'''
