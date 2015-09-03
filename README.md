@@ -39,6 +39,7 @@ Run:
 * CPU: Intel(R) Xeon(R) CPU E5-2630L v2 @ 2.40GHz (1 core)
 * Memory: 512MB
 * OS: Debian Jessie
+
 (DigitalOcean $5/mon virtual server)
 
 ### Code
@@ -50,6 +51,7 @@ Run:
 * Channels: 50
 * Users per channel: 90
 * Rate of talking: 1 message / 2 seconds (on each channel)
+
 (using testclient present in repo)
 
 ### Results
