@@ -221,12 +221,19 @@ class User(object):
     def cmd_profiling(self):
         '''Process PROFILING command.'''
         import yappi
-        stats = yappi.get_func_stats()
-        self.send_notice(origin = self.server.name,
-                          text = 'name\tncall\ttsub\ttot\ttavg')
+        stats = yappi.get_func_stats()[0:30]
+        self.send_notice(sender = self.server.name,
+                         recipient = self.nick,
+                         text = ' ' * 45 + 
+                                'name' + ' ' * 4 +
+                                'ncall' + ' ' * 3 +
+                                'tsub' + ' ' * 4 +
+                                'tot' + ' ' * 5 +
+                                'tavg')
         for row in stats:
-            self.send_notice(origin = self.server.name,
-                text = '%s\t%s\t%s\t%s\t%s' % (row[12][-44:-1],
+            self.send_notice(sender = self.server.name,
+                             recipient = self.nick,
+                             text = '%s  %s %s %s %s' % (row[12][-44:-1],
                                                format(row[4] / row[3], '.5f'),
                                                format(row[7], '.5f'),
                                                format(row[6], '.5f'),
