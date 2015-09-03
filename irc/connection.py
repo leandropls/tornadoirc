@@ -8,6 +8,7 @@ from tornado.iostream import IOStream
 from tornado.ioloop import IOLoop
 
 from typing import Undefined, List, Optional, Callable
+from random import randint
 import logging
 import inspect
 import time
@@ -48,21 +49,17 @@ class Connection(object):
         methodname = 'cmd_%s' % command.lower()
 
         # Process command
-        t0 = time.monotonic()
-        try:
-            if self.user and hasattr(self.user, methodname):
-                self._call_user_method(command, params)
-            elif hasattr(self, methodname):
-                self._call_conn_method(prefix, command, params)
-        except CommandError as e:
-            self.send_message(msgid = e.msgid, **e.msgparams)
-        finally:
-            t1 = time.monotonic()
-            elapsed = format((t1 - t0) * 1e3, '.2f')
-            client = (self.user.address
-                     if self.user
-                     else '%s:%s' % (self.address, self.port))
-            logger.info('%s %s %sms', client, command.upper(), elapsed)
+        client = (self.user.address
+                 if self.user
+                 else '%s:%s' % (self.address, self.port))
+        action_name = '%s %s' % (client, command.upper())
+
+        if self.user and hasattr(self.user, methodname):
+            self.take_action(action_name, self._call_user_method,
+                             command, params)
+        elif hasattr(self, methodname):
+            self.take_action(action_name, self._call_conn_method,
+                             prefix, command, params)
 
     def on_close(self):
         '''Deals with a connection closed event.'''
@@ -72,6 +69,19 @@ class Connection(object):
     ##
     # Server initiated actions
     ##
+    def take_action(self, name: str, method: Callable, *args: list, **kwargs: dict):
+        '''Calls method wrapped in error handling and logging structure.'''
+        # Process command
+        t0 = time.monotonic()
+        try:
+            method(*args, **kwargs)
+        except CommandError as e:
+            self.send_message(msgid = e.msgid, **e.msgparams)
+        finally:
+            t1 = time.monotonic()
+            elapsed = format((t1 - t0) * 1e3, '.2f')
+            logger.info('%s %sms', name, elapsed)
+
     def send_message(self, msgid: str, **params):
         '''Send message to connection.'''
         if self.stream.closed():
@@ -95,23 +105,30 @@ class Connection(object):
         if self.user:
             raise AlreadyRegisteredError()
 
-        self.user = User(nick = self.req_nick, server = self.server,
-                         connection = self, hopcount = 0,
-                         username = '~' + self.req_user['username'],
-                         hostname = self.address,
-                         servername = self.server.name,
-                         realname = self.req_user['realname'])
-        self.req_nick = None
-        self.req_user = None
-        self.server.users[self.user.nick] = self.user
+        def do_register():
+            self.user = User(nick = self.req_nick, server = self.server,
+                             connection = self, hopcount = 0,
+                             username = '~' + self.req_user['username'],
+                             hostname = self.address,
+                             servername = self.server.name,
+                             realname = self.req_user['realname'])
+            self.req_nick = None
+            self.req_user = None
+            self.server.users[self.user.nick] = self.user
 
-        # Remove register timeout timer
-        if self.regtimer:
-            IOLoop.current().remove_timeout(self.regtimer)
-            self.regtimer = None
+            # Remove register timeout timer
+            if self.regtimer:
+                IOLoop.current().remove_timeout(self.regtimer)
+                self.regtimer = None
 
-        # Call user on_register event
-        self.user.on_register()
+            # Call user on_register event
+            self.user.on_register()
+
+        register_action = lambda: self.take_action('REGUSER', do_register)
+
+        wait_time = randint(0, 5)
+        IOLoop.current().call_later(wait_time, register_action)
+
 
     ##
     # Command processing auxiliary methods
