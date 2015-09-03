@@ -60,6 +60,9 @@ class Connection(object):
         elif hasattr(self, methodname):
             self.take_action(action_name, self._call_conn_method,
                              prefix, command, params)
+        else:
+            self.send_message(msgid = 'ERR_UNKNOWNCOMMAND',
+                              command = command.upper())
 
     def on_close(self):
         '''Deals with a connection closed event.'''

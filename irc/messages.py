@@ -28,6 +28,7 @@ messages = {
     'ERR_NOSUCHCHANNEL':    ':%(servername)s 403 %(target)s %(channel)s :No such channel',
     'ERR_CANNOTSENDTOCHAN': ':%(servername)s 404 %(target)s %(channel)s :Cannot send to channel',
     'ERR_NOMOTD':           ':%(servername)s 422 %(target)s :MOTD File is missing',
+    'ERR_UNKNOWNCOMMAND':   ':%(servername)s 421 %(target)s %(command)s :Unknown command',
     'ERR_NONICKNAMEGIVEN':  ':%(servername)s 431 %(target)s :No nickname given',
     'ERR_ERRONEUSNICKNAME': ':%(servername)s 432 %(target)s %(nick)s :Erroneus nickname',
     'ERR_NICKNAMEINUSE':    ':%(servername)s 433 %(target)s %(nick)s :Nickname is already in use',

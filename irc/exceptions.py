@@ -73,6 +73,13 @@ class CannotSendToChanError(CommandError):
         self.msgid = 'ERR_CANNOTSENDTOCHAN'
         self.msgparams = {'channel': channel}
 
+class UnknownCommandError(CommandError):
+    '''421 - Unknown command'''
+    def __init__(self, command):
+        super().__init__()
+        self.msgid = 'ERR_UNKNOWNCOMMAND'
+        self.msgparams = {'command': command}
+
 class NoMotdError(CommandError):
     '''422 - You may not reregister'''
     def __init__(self):
