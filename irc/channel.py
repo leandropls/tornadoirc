@@ -32,7 +32,7 @@ class Channel(object):
     @limit.setter
     def limit(self, value):
         chanlimit = self.catalog.server.settings['chanlimit']
-        self._limit = min(self.server_chanlimit, value)
+        self._limit = min(chanlimit, value)
 
     def __init__(self, name: str, catalog: 'ChannelCatalog'):
         if not name or name[0] != '#':
