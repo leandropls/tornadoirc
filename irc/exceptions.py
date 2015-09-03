@@ -115,6 +115,13 @@ class ChannelIsFullError(CommandError):
         self.msgid = 'ERR_CHANNELISFULL'
         self.msgparams = {'channel': channel}
 
+class BannedFromChanError(CommandError):
+    '''474 - Cannot join channel (+b)'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_BANNEDFROMCHAN'
+        self.msgparams = {'channel': channel}
+
 class BadChannelKeyError(CommandError):
     '''475 - Cannot join channel (+k)'''
     def __init__(self, channel: str):

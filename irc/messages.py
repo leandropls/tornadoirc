@@ -19,6 +19,8 @@ messages = {
     'RPL_VERSION':          ':%(servername)s 351 %(target)s %(version)s %(servername)s :%(comments)s',
     'RPL_NAMREPLY':         ':%(servername)s 353 %(target)s %(chantype)s %(channel)s :%(nicklist)s',
     'RPL_ENDOFNAMES':       ':%(servername)s 366 %(target)s %(channel)s :End of NAMES list',
+    'RPL_BANLIST':          ':%(servername)s 367 %(target)s %(channel)s %(banmask)s %(author)s %(timestamp)s',
+    'RPL_ENDOFBANLIST':     ':%(servername)s 368 %(target)s %(channel)s :End of channel ban list',
     'RPL_MOTD':             ':%(servername)s 372 %(target)s :- %(text)s',
     'RPL_MOTDSTART':        ':%(servername)s 375 %(target)s :- %(servername)s Message of the day - ',
     'RPL_ENDOFMOTD':        ':%(servername)s 376 %(target)s :End of MOTD command',
@@ -37,6 +39,7 @@ messages = {
     'ERR_NEEDMOREPARAMS':   ':%(servername)s 461 %(target)s %(command)s :Not enough parameters',
     'ERR_ALREADYREGISTRED': ':%(servername)s 462 %(target)s :You may not reregister',
     'ERR_CHANNELISFULL':    ':%(servername)s 471 %(target)s %(channel)s :Cannot join channel (+l)',
+    'ERR_BANNEDFROMCHAN':   ':%(servername)s 474 %(target)s %(channel)s :Cannot join channel (+b)',
     'ERR_BADCHANNELKEY':    ':%(servername)s 475 %(target)s %(channel)s :Cannot join channel (+k)',
 
     'CMD_ERROR':            'ERROR :Closing Link: %(ipaddr)s (%(text)s)',
@@ -50,4 +53,5 @@ messages = {
     'CMD_PART':             ':%(useraddr)s PART %(channel)s :%(message)s',
     'CMD_TOPIC':            ':%(useraddr)s TOPIC %(channel)s :%(topic)s',
     'CMD_MODE':             ':%(sender)s MODE %(recipient)s :%(modes)s',
+    'CMD_MODE_CHAN':        ':%(useraddr)s MODE %(channel)s %(modes)s',
 }

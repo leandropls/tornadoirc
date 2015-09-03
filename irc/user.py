@@ -80,6 +80,12 @@ class User(object):
         logger.info('Registered new user: %s!%s@%s',
                     self.nick, self.username, self.hostname)
 
+    def __repr__(self):
+        return '<User: %s>' % self.address
+
+    def __str__(self):
+        return self.nick
+
     ##
     # Events
     ##
@@ -254,14 +260,21 @@ class User(object):
         self.send_message('CMD_NICK', oldaddr = oldaddr, nick = self.nick)
 
     @log_exceptions
-    def cmd_mode(self, target: str, modes: Optional[str] = None):
+    def cmd_mode(self, target: str, *modes: Tuple[str]):
         '''Process MODE command.'''
         if target.lower() != self.nick.lower():
+            if target[0] != '#':
+                return
+            if target not in self.channels:
+                raise NotOnChannelError(channel = target)
+            #logger.info('%s %s %s', self, modes, self.channels[target].mode)
+            self.channels[target].mode(user = self, modes = modes)
             return
 
         if not modes:
             self.send_message('RPL_UMODEIS', modes = ''.join(self.modes))
             return
+        modes = modes[0]
 
         add = True
         usermodes = self.server.usermodes
@@ -294,7 +307,7 @@ class User(object):
         action = ('+%s' % added) if added else ''
         action += ('-%s' % removed) if removed else ''
         self.send_message('CMD_MODE', sender = self.nick,
-                          recipient = self.nick, mode = action)
+                          recipient = self.nick, modes = action)
 
     def cmd_quit(self, message: str = ''):
         '''Process QUIT command.'''

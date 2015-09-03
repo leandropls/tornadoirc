@@ -3,7 +3,9 @@
 from .util import LowerCaseDict, log_exceptions
 from .exceptions import *
 
-from typing import Undefined, Optional
+from typing import Undefined, Optional, Tuple, List, Dict
+from datetime import datetime
+from fnmatch import fnmatch
 import logging
 import re
 
@@ -16,8 +18,26 @@ class Channel(object):
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
     key = Undefined(Optional[str])
+    banlist = Undefined(Dict[str, Tuple[str, int]]) # {'banmask': ('author', timestamp)}
     _limit = Undefined(int)
     _name_regex = re.compile(r'^#\w+$')
+    _knownmodes = {
+         'b': {'param': True,  'method': 'mode_ban'},
+         'i': {'param': False, 'method': 'mode_inviteonly'},
+         'k': {'param': True,  'method': 'mode_key'},
+         'l': {'param': True,  'method': 'mode_limit'},
+         'm': {'param': False, 'method': 'mode_moderated'},
+         'I': {'param': True,  'method': 'mode_invite'},
+         'o': {'param': True,  'method': 'mode_operator'},
+         'O': {'param': False, 'method': 'mode_owner'},
+         's': {'param': False, 'method': 'mode_secret'},
+         'v': {'param': True,  'method': 'mode_voice'},
+    }
+    _addrmask_regex = re.compile(
+        r'^(([\w?*]+$)|([\w?*]+!))?'                # nickmask or nickmask!
+        r'(([a-zA-Z0-9.*?]+$)|([a-zA-Z0-9.*?]+@))?' # usermask or usermask@
+        r'[a-zA-Z0-9.*?]+$'                         # hostmask
+    )
 
     @property
     def limit(self):
@@ -35,6 +55,7 @@ class Channel(object):
         self.topic = None
         self.users = LowerCaseDict()
         self.key = None
+        self.banlist = {}
         self._limit = catalog.server.settings['chanlimit']
 
     def set_name(self, value: str, chanlen_max: int):
@@ -53,13 +74,26 @@ class Channel(object):
 
     def join(self, user: 'User', key: Optional[str] = None):
         '''Joins user to this channel.'''
+        # Check if it's already in
         if user.nick in self.users:
             return
+
+        # Check password
         if self.key and key and self.key != key:
             raise BadChannelKeyError()
+
+        # Check channel size limit
         if len(self.users) >= self.limit:
             raise ChannelIsFullError(channel = self.name)
 
+        # Check ban list
+        lcaddr = user.address.lower()
+        lcnick = user.nick.lower()
+        for mask in self.banlist:
+            if fnmatch(lcnick, mask) or fnmatch(lcaddr, mask):
+                raise BannedFromChanError(channel = self.name)
+
+        # Join user
         self.users[user.nick] = {'user': user}
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
@@ -169,6 +203,83 @@ class Channel(object):
             target.send_notice(sender = sender, recipient = recipient,
                                text = text)
 
+    @log_exceptions
+    def send_modes(self, user: 'User'):
+        '''Send channel modes to user.'''
+        return
+
+    @log_exceptions
+    def mode(self, user: 'User', modes: Tuple[str]):
+        '''Process MODE command for channels.'''
+        if not modes:
+            return
+            channel.send_modes(user = self)
+
+        knownmodes = self._knownmodes
+        mlist = []
+        modeiter = iter(modes)          # Eq. to "for mstr in modes", except
+        while True:                     # that this way it's possible to
+            try: mstr = next(modeiter)  # advance the interator from other
+            except: break               # places within the loop.
+            oper = '+'
+            for m in mstr:
+                if m == '+' or m == '-':
+                    oper = m
+                if m in knownmodes:
+                    param = next(modeiter, '') if knownmodes[m]['param'] else ''
+                    mlist.append((m, oper, param))
+
+        operations = {}
+        for m in mlist:
+            operations.setdefault(m[0], []).append((m[1], m[2]))
+
+        for m in operations:
+            if hasattr(self, knownmodes[m]['method']):
+                method = getattr(self, knownmodes[m]['method'])
+                method(user = user, operations = operations[m])
+
+    @log_exceptions
+    def mode_ban(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +b operations'''
+        timestamp = int(datetime.now().timestamp())
+        banlist = self.banlist
+        sendlist = False
+        eff_modes = []
+        eff_params = []
+        lastoper = None
+        for oper, param in operations:
+            if not param: # MODE #chan +b
+                sendlist = True
+                continue
+            if not self._addrmask_regex.match(param): # MODE #chan +b !@xxx
+                continue
+            param = param.lower()
+            if oper == '+' and param not in banlist: # MODE #chan +b nick!*@*
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append('b')
+                eff_params.append(param)
+                banlist[param] = (user.address, timestamp)
+                continue
+            if oper == '-' and param in banlist: # MODE #chan -b nick!*@*
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append('b')
+                eff_params.append(param)
+                del banlist[param]
+                continue
+        if eff_modes:
+            eff_str = '%s %s' % (''.join(eff_modes), ' '.join(eff_params))
+            self.broadcast_message('CMD_MODE_CHAN',
+                                   useraddr = user.address,
+                                   channel = self.name,
+                                   modes = eff_str)
+        if sendlist:
+            for b in banlist:
+                user.send_message('RPL_BANLIST',
+                                  channel = self.name,
+                                  banmask = b,
+                                  author = banlist[b][0],
+                                  timestamp = banlist[b][1])
+            user.send_message('RPL_ENDOFBANLIST', channel = self.name)
 
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''
