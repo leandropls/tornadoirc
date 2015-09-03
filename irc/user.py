@@ -224,8 +224,8 @@ class User(object):
         stats = yappi.get_func_stats()[0:30]
         self.send_notice(sender = self.server.name,
                          recipient = self.nick,
-                         text = ' ' * 45 + 
-                                'name' + ' ' * 4 +
+                         text = 'name' + ' ' * 4 +
+                                ' ' * 47 +
                                 'ncall' + ' ' * 3 +
                                 'tsub' + ' ' * 4 +
                                 'tot' + ' ' * 5 +
@@ -233,7 +233,7 @@ class User(object):
         for row in stats:
             self.send_notice(sender = self.server.name,
                              recipient = self.nick,
-                             text = '%s  %s %s %s %s' % (row[12][-44:-1],
+                             text = '%s  %s %s %s %s' % (row[12][-53:],
                                                format(row[4] / row[3], '.5f'),
                                                format(row[7], '.5f'),
                                                format(row[6], '.5f'),
