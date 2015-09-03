@@ -6,10 +6,13 @@ from .exceptions import *
 from typing import Undefined, Optional, Tuple, List, Dict
 from datetime import datetime
 from fnmatch import fnmatch
+from collections import namedtuple
 import logging
 import re
 
 logger = logging.getLogger('tornado.general')
+
+ModeTuple = namedtuple('ModeTuple', ['author', 'timestamp'])
 
 class Channel(object):
     '''IRC channel'''
@@ -18,11 +21,14 @@ class Channel(object):
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': {'user': user}}
     key = Undefined(Optional[str])
-    banlist = Undefined(Dict[str, Tuple[str, int]]) # {'banmask': ('author', timestamp)}
+    banlist = Undefined(Dict[str, ModeTuple])
+    invlist = Undefined(Dict[str, ModeTuple])
+    exclist = Undefined(Dict[str, ModeTuple])
     _limit = Undefined(int)
     _name_regex = re.compile(r'^#\w+$')
     _knownmodes = {
          'b': {'param': True,  'method': 'mode_ban'},
+         'e': {'param': True,  'method': 'mode_except'},
          'i': {'param': False, 'method': 'mode_inviteonly'},
          'k': {'param': True,  'method': 'mode_key'},
          'l': {'param': True,  'method': 'mode_limit'},
@@ -56,6 +62,8 @@ class Channel(object):
         self.users = LowerCaseDict()
         self.key = None
         self.banlist = {}
+        self.invlist = {}
+        self.exclist = {}
         self._limit = catalog.server.settings['chanlimit']
 
     def set_name(self, value: str, chanlen_max: int):
@@ -239,32 +247,54 @@ class Channel(object):
                 method(user = user, operations = operations[m])
 
     @log_exceptions
+    def mode_invite(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +I operations'''
+        self._mode_list(user = user, operations = operations, char = 'I',
+                        modelist = self.exclist, listmsgid = 'RPL_INVITELIST',
+                        listendmsgid = 'RPL_ENDOFINVITELIST')
+
+    @log_exceptions
+    def mode_except(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +e operations'''
+        self._mode_list(user = user, operations = operations, char = 'e',
+                        modelist = self.exclist, listmsgid = 'RPL_EXCEPTLIST',
+                        listendmsgid = 'RPL_ENDOFEXCEPTLIST')
+
+    @log_exceptions
     def mode_ban(self, user: 'User', operations: List[Tuple[str, str]]):
         '''Process MODE +b operations'''
+        self._mode_list(user = user, operations = operations, char = 'b',
+                        modelist = self.banlist, listmsgid = 'RPL_BANLIST',
+                        listendmsgid = 'RPL_ENDOFBANLIST')
+
+    @log_exceptions
+    def _mode_list(self, user: 'User', operations: List[Tuple[str, str]],
+                   char: str, modelist: Dict[str, Tuple[str, int]],
+                   listmsgid: str, listendmsgid: str):
+        '''Process MODE +b / +I / +e operations'''
         timestamp = int(datetime.now().timestamp())
-        banlist = self.banlist
         sendlist = False
         eff_modes = []
         eff_params = []
         lastoper = None
         for oper, param in operations:
-            if not param: # MODE #chan +b
+            if not param: # MODE #chan +x
                 sendlist = True
                 continue
-            if not self._addrmask_regex.match(param): # MODE #chan +b !@xxx
+            if not self._addrmask_regex.match(param): # MODE #chan +x !@xxx
                 continue
             param = param.lower()
-            if oper == '+' and param not in banlist: # MODE #chan +b nick!*@*
+            if oper == '+' and param not in modelist: # MODE #chan +x nick!*@*
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
-                eff_modes.append('b')
+                eff_modes.append(char)
                 eff_params.append(param)
-                banlist[param] = (user.address, timestamp)
+                modelist[param] = ModeTuple(user.address, timestamp)
                 continue
-            if oper == '-' and param in banlist: # MODE #chan -b nick!*@*
+            if oper == '-' and param in modelist: # MODE #chan -x nick!*@*
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
-                eff_modes.append('b')
+                eff_modes.append(char)
                 eff_params.append(param)
-                del banlist[param]
+                del modelist[param]
                 continue
         if eff_modes:
             eff_str = '%s %s' % (''.join(eff_modes), ' '.join(eff_params))
@@ -273,13 +303,14 @@ class Channel(object):
                                    channel = self.name,
                                    modes = eff_str)
         if sendlist:
-            for b in banlist:
-                user.send_message('RPL_BANLIST',
+            for mask in modelist:
+                user.send_message(listmsgid,
                                   channel = self.name,
-                                  banmask = b,
-                                  author = banlist[b][0],
-                                  timestamp = banlist[b][1])
-            user.send_message('RPL_ENDOFBANLIST', channel = self.name)
+                                  mask = mask,
+                                  author = modelist[mask].author,
+                                  timestamp = modelist[mask].timestamp)
+            user.send_message(listendmsgid, channel = self.name)
+
 
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''
