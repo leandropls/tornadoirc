@@ -24,6 +24,7 @@ ircd = {
              'This server is a test version of tornadoirc',
              'If you find any issues, please report to the developer.'],
     'nicklen': 30,
+    'chanlen': 50,
     'pinginterval': 120,
     'pingtimeout': 60,
     'chanlimit': 100,
