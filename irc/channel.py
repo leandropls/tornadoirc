@@ -41,9 +41,9 @@ class Channel(object):
          'v': {'param': True,  'method': 'mode_voice'},
     }
     _addrmask_regex = re.compile(
-        r'^(([\w?*]+$)|([\w?*]+!))?'                # nickmask or nickmask!
-        r'(([a-zA-Z0-9.*?]+$)|([a-zA-Z0-9.*?]+@))?' # usermask or usermask@
-        r'[a-zA-Z0-9.*?]+$'                         # hostmask
+        r'^((?:[\w?*]+$)|(?:[\w?*]+!))?'              # nickmask or nickmask!
+        r'((?:[a-zA-Z0-9*?]+$)|(?:[a-zA-Z0-9*?]+@))?' # usermask or usermask@
+        r'([a-zA-Z0-9.*?]+)?$'                        # hostmask
     )
 
     @property
@@ -97,9 +97,8 @@ class Channel(object):
 
         # Check ban list
         lcaddr = user.address.lower()
-        lcnick = user.nick.lower()
         for mask in self.banlist:
-            if fnmatch(lcnick, mask) or fnmatch(lcaddr, mask):
+            if fnmatch(lcaddr, mask):
                 raise BannedFromChanError(channel = self.name)
 
         # Join user
@@ -292,9 +291,20 @@ class Channel(object):
                 continue
             if not self.users[user.nick].operator:
                 raise ChanOpsPrivsNeededError(channel = self.name)
-            if not self._addrmask_regex.match(param): # MODE #chan +x !@xxx
+
+            # Parse mask
+            match = self._addrmask_regex.match(param)
+            if not match:
                 continue
+            parts = match.groups()
+            logger.info(str(parts))
+            if not any(parts):
+                continue
+            param = ('%s!' % parts[0].rstrip('!')) if parts[0] else '*!'
+            param += ('%s@' % parts[1].rstrip('@')) if parts[1] else '*@'
+            param += parts[2] if parts[2] else '*'
             param = param.lower()
+
             if oper == '+' and param not in modelist: # MODE #chan +x nick!*@*
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
                 eff_modes.append(char)
