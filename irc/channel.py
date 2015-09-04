@@ -13,7 +13,7 @@ import re
 logger = logging.getLogger('tornado.general')
 
 ModeTuple = namedtuple('ModeTuple', ['author', 'timestamp'])
-UserTuple = namedtuple('UserTuple', ['user', 'operator'])
+UserTuple = namedtuple('UserTuple', ['user', 'operator', 'voice'])
 
 class Channel(object):
     '''IRC channel'''
@@ -22,6 +22,9 @@ class Channel(object):
     topic = Undefined(Optional[str])
     users = Undefined(LowerCaseDict) # users = {'nick': UserTuple}
     key = Undefined(Optional[str])
+    moderated = False
+    inviteonly = False
+    secret = False
     banlist = Undefined(Dict[str, ModeTuple])
     invlist = Undefined(Dict[str, ModeTuple])
     exclist = Undefined(Dict[str, ModeTuple])
@@ -36,7 +39,6 @@ class Channel(object):
          'm': {'param': False, 'method': 'mode_moderated'},
          'I': {'param': True,  'method': 'mode_invite'},
          'o': {'param': True,  'method': 'mode_operator'},
-         'O': {'param': False, 'method': 'mode_owner'},
          's': {'param': False, 'method': 'mode_secret'},
          'v': {'param': True,  'method': 'mode_voice'},
     }
@@ -89,21 +91,33 @@ class Channel(object):
 
         # Check password
         if self.key and key and self.key != key:
-            raise BadChannelKeyError()
+            raise BadChannelKeyError(channel = self.name)
 
         # Check channel size limit
         if len(self.users) >= self.limit:
             raise ChannelIsFullError(channel = self.name)
 
         # Check ban list
+        if self._banned(user.address):
+            raise BannedFromChanError(channel = self.name)
+
+        # Check invite
         lcaddr = user.address.lower()
-        for mask in self.banlist:
-            if fnmatch(lcaddr, mask):
-                raise BannedFromChanError(channel = self.name)
+        if self.inviteonly:
+            invited = False
+            for mask in self.invlist:
+                logger.info('%s %s', lcaddr, mask)
+                if fnmatch(lcaddr, mask):
+                    logger.info('invited')
+                    invited = True
+                    break
+            if not invited:
+                raise InviteOnlyChanError(channel = self.name)
 
         # Join user
         operator = len(self.users) == 0
-        self.users[user.nick] = UserTuple(user = user, operator = operator)
+        self.users[user.nick] = UserTuple(user = user, operator = operator,
+                                          voice = False)
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
                                useraddr = user.address,
@@ -114,7 +128,7 @@ class Channel(object):
     def part(self, user: 'User', message: str = None):
         '''Parts user from this channel.'''
         if user.nick not in self.users:
-            raise NotOnChannelError()
+            return
         if not message:
             message = ''
         self.broadcast_message('CMD_PART',
@@ -169,6 +183,9 @@ class Channel(object):
             if users[nick].operator:
                 nicklist.append('@%s' % users[nick].user.nick)
                 continue
+            if users[nick].voice:
+                nicklist.append('+%s' % users[nick].user.nick)
+                continue
             nicklist.append(users[nick].user.nick)
         nicklist_str = ' '.join(nicklist)
         try:
@@ -197,7 +214,16 @@ class Channel(object):
         '''Send PRIVMSG command to channel\'s users.'''
         sendernick = sender.split('!')[0]
         if sendernick not in self.users:
-            raise CannotSendToChanError()
+            raise CannotSendToChanError(channel = self.name)
+
+        senderuser = self.users[sendernick]
+        if (self.moderated and
+            not senderuser.operator and
+            not senderuser.voice):
+            raise CannotSendToChanError(channel = self.name)
+
+        if self._banned(senderuser.user.address):
+            raise CannotSendToChanError(channel = self.name)
 
         for nick in self.users:
             target = self.users[nick].user
@@ -222,14 +248,32 @@ class Channel(object):
     @log_exceptions
     def send_modes(self, user: 'User'):
         '''Send channel modes to user.'''
-        return
+        modes = []
+        params = []
+
+        if self.moderated:
+            modes.append('m')
+        if self.inviteonly:
+            modes.append('i')
+        if self.secret:
+            modes.append('s')
+        if self.key:
+            modes.append('k')
+            params.append(key)
+        if modes:
+            modes.insert(0, '+')
+
+        mode_str = '%s %s' % (''.join(modes), ' '.join(params))
+        user.send_message('RPL_CHANNELMODEIS',
+                          channel = self.name, modes = mode_str)
 
     @log_exceptions
     def mode(self, user: 'User', modes: Tuple[str]):
         '''Process MODE command for channels.'''
-        if not modes:
+        if user.nick not in self.users:
             return
-            channel.send_modes(user = self)
+        if not modes:
+            self.send_modes(user = user)
 
         knownmodes = self._knownmodes
         mlist = []
@@ -258,7 +302,7 @@ class Channel(object):
     def mode_invite(self, user: 'User', operations: List[Tuple[str, str]]):
         '''Process MODE +I operations'''
         self._mode_list(user = user, operations = operations, char = 'I',
-                        modelist = self.exclist, listmsgid = 'RPL_INVITELIST',
+                        modelist = self.invlist, listmsgid = 'RPL_INVITELIST',
                         listendmsgid = 'RPL_ENDOFINVITELIST')
 
     @log_exceptions
@@ -297,7 +341,6 @@ class Channel(object):
             if not match:
                 continue
             parts = match.groups()
-            logger.info(str(parts))
             if not any(parts):
                 continue
             param = ('%s!' % parts[0].rstrip('!')) if parts[0] else '*!'
@@ -332,10 +375,22 @@ class Channel(object):
                                   timestamp = modelist[mask].timestamp)
             user.send_message(listendmsgid, channel = self.name)
 
+    @log_exceptions
+    def mode_voice(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +v operations'''
+        self._mode_user_bool(user = user, operations = operations,
+                             attrname = 'voice', char = 'v')
 
     @log_exceptions
     def mode_operator(self, user: 'User', operations: List[Tuple[str, str]]):
         '''Process MODE +o operations'''
+        self._mode_user_bool(user = user, operations = operations,
+                             attrname = 'operator', char = 'o')
+
+    @log_exceptions
+    def _mode_user_bool(self, user: 'User', operations: List[Tuple[str, str]],
+                        attrname: str, char: str):
+        '''Process MODE +o / +v operations'''
         if user.nick not in self.users:
             return
         if not self.users[user.nick].operator:
@@ -348,17 +403,21 @@ class Channel(object):
             if param not in self.users:
                 continue
             target = self.users[param]
-            if oper == '+' and not target.operator: # MODE #chan +o nick
+            if oper == '+' and not getattr(target, attrname): # +o nick
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
-                eff_modes.append('o')
+                eff_modes.append(char)
                 eff_params.append(param)
-                self.users[param] = target._replace(operator = True)
+                userdict = self.users[param]._asdict()
+                userdict[attrname] = True
+                self.users[param] = UserTuple(**userdict)
                 continue
-            if oper == '-' and target.operator: # MODE #chan -o nick
+            if oper == '-' and getattr(target, attrname): # -o nick
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
-                eff_modes.append('o')
+                eff_modes.append(char)
                 eff_params.append(param)
-                self.users[param] = target._replace(operator = False)
+                userdict = self.users[param]._asdict()
+                userdict[attrname] = False
+                self.users[param] = UserTuple(**userdict)
                 continue
         if eff_modes:
             eff_str = '%s %s' % (''.join(eff_modes), ' '.join(eff_params))
@@ -367,6 +426,62 @@ class Channel(object):
                                    channel = self.name,
                                    modes = eff_str)
 
+    def mode_moderated(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +m operations'''
+        self._mode_chan_bool(user = user, operations = operations,
+                             attrname = 'moderated', char = 'm')
+
+
+    def mode_inviteonly(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +i operations'''
+        self._mode_chan_bool(user = user, operations = operations,
+                             attrname = 'inviteonly', char = 'i')
+
+    def mode_secret(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +s operations'''
+        self._mode_chan_bool(user = user, operations = operations,
+                             attrname = 'secret', char = 's')
+
+    @log_exceptions
+    def _mode_chan_bool(self, user: 'User', operations: List[Tuple[str, str]],
+                        attrname: str, char: str):
+        if user.nick not in self.users:
+            return
+        if not self.users[user.nick].operator:
+            raise ChanOpsPrivsNeededError(channel = self.name)
+
+        eff_modes = []
+        lastoper = None
+        for oper, param in operations:
+            if oper == '+' and not getattr(self, attrname):
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append(char)
+                setattr(self, attrname, True)
+                continue
+            if oper == '-' and getattr(self, attrname):
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append(char)
+                setattr(self, attrname, False)
+                continue
+        if eff_modes:
+            eff_str = ''.join(eff_modes)
+            self.broadcast_message('CMD_MODE_CHAN',
+                                   useraddr = user.address,
+                                   channel = self.name,
+                                   modes = eff_str)
+
+    def _banned(self, useraddr: str):
+        '''Check if useraddr is banned and not excepted'''
+        lcaddr = useraddr.lower()
+        for mask in self.exclist:
+            if fnmatch(lcaddr, mask):
+                return False
+
+        for mask in self.banlist:
+            if fnmatch(lcaddr, mask):
+                return True
+
+        return False
 
 class ChannelCatalog(LowerCaseDict):
     '''Catalog with all channels within an IRC server/network.'''

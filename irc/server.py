@@ -7,7 +7,7 @@ from .router import EntityRouter
 
 from tornado.tcpserver import TCPServer
 from tornado import gen
-from tornado.iostream import StreamClosedError
+from tornado.iostream import StreamClosedError, UnsatisfiableReadError
 
 from typing import Undefined
 import logging
@@ -27,7 +27,7 @@ class IRCServer(object):
     usermodes = 'aiwroO'
     usermodes_restricted_add = 'aoO'
     usermodes_restricted_rem = 'ar'
-    channelmodes = ''
+    channelmodes = 'beimIov'
     users = Undefined(dict)
     channels = Undefined(ChannelCatalog)
     router = Undefined(EntityRouter)
@@ -105,6 +105,9 @@ class IRCTCPServer(TCPServer):
                 connection.on_close()
                 logger.info('Connection from %s closed.', address[0])
                 return
+            except UnsatisfiableReadError:
+                stream.close()
+                continue
             except Exception as e:
                 error_desc = '(%s) %s' % (sys.exc_info()[0].__name__, str(e))
                 error_file = os.path.basename(sys.exc_info()[2].tb_frame.f_code.co_filename)
