@@ -13,7 +13,7 @@ import re
 logger = logging.getLogger('tornado.general')
 
 ModeTuple = namedtuple('ModeTuple', ['author', 'timestamp'])
-UserTuple = namedtuple('UserTuple', ['user'])
+UserTuple = namedtuple('UserTuple', ['user', 'operator'])
 
 class Channel(object):
     '''IRC channel'''
@@ -103,7 +103,8 @@ class Channel(object):
                 raise BannedFromChanError(channel = self.name)
 
         # Join user
-        self.users[user.nick] = UserTuple(user = user)
+        operator = len(self.users) == 0
+        self.users[user.nick] = UserTuple(user = user, operator = operator)
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
                                useraddr = user.address,
@@ -144,6 +145,8 @@ class Channel(object):
 
     def set_topic(self, user: 'User', topic: str = ''):
         '''Sets channel topic.'''
+        if not self.users[user.nick].operator:
+            raise ChanOpsPrivsNeededError(channel = self.name)
         self.topic = topic
         self.broadcast_message('CMD_TOPIC',
                                useraddr = user.address,
@@ -162,7 +165,12 @@ class Channel(object):
     def send_names(self, user: 'User', suppress_end = False):
         '''Send current channel members nicks to user.'''
         users = self.users
-        nicklist = [users[nick].user.nick for nick in users]
+        nicklist = []
+        for nick in users:
+            if users[nick].operator:
+                nicklist.append('@%s' % users[nick].user.nick)
+                continue
+            nicklist.append(users[nick].user.nick)
         nicklist_str = ' '.join(nicklist)
         try:
             user.send_message('RPL_NAMREPLY',
@@ -282,6 +290,8 @@ class Channel(object):
             if not param: # MODE #chan +x
                 sendlist = True
                 continue
+            if not self.users[user.nick].operator:
+                raise ChanOpsPrivsNeededError(channel = self.name)
             if not self._addrmask_regex.match(param): # MODE #chan +x !@xxx
                 continue
             param = param.lower()
@@ -311,6 +321,41 @@ class Channel(object):
                                   author = modelist[mask].author,
                                   timestamp = modelist[mask].timestamp)
             user.send_message(listendmsgid, channel = self.name)
+
+
+    @log_exceptions
+    def mode_operator(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +o operations'''
+        if user.nick not in self.users:
+            return
+        if not self.users[user.nick].operator:
+            raise ChanOpsPrivsNeededError(channel = self.name)
+
+        eff_modes = []
+        eff_params = []
+        lastoper = None
+        for oper, param in operations:
+            if param not in self.users:
+                continue
+            target = self.users[param]
+            if oper == '+' and not target.operator: # MODE #chan +o nick
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append('o')
+                eff_params.append(param)
+                self.users[param] = target._replace(operator = True)
+                continue
+            if oper == '-' and target.operator: # MODE #chan -o nick
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append('o')
+                eff_params.append(param)
+                self.users[param] = target._replace(operator = False)
+                continue
+        if eff_modes:
+            eff_str = '%s %s' % (''.join(eff_modes), ' '.join(eff_params))
+            self.broadcast_message('CMD_MODE_CHAN',
+                                   useraddr = user.address,
+                                   channel = self.name,
+                                   modes = eff_str)
 
 
 class ChannelCatalog(LowerCaseDict):

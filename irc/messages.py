@@ -45,6 +45,7 @@ messages = {
     'ERR_CHANNELISFULL':    ':%(servername)s 471 %(target)s %(channel)s :Cannot join channel (+l)',
     'ERR_BANNEDFROMCHAN':   ':%(servername)s 474 %(target)s %(channel)s :Cannot join channel (+b)',
     'ERR_BADCHANNELKEY':    ':%(servername)s 475 %(target)s %(channel)s :Cannot join channel (+k)',
+    'ERR_CHANOPRIVSNEEDED': ':%(servername)s 482 %(target)s %(channel)s :You\'re not channel operator',
 
     'CMD_ERROR':            'ERROR :Closing Link: %(ipaddr)s (%(text)s)',
     'CMD_QUIT':             ':%(useraddr)s QUIT :%(message)s',

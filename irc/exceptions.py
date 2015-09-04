@@ -128,3 +128,10 @@ class BadChannelKeyError(CommandError):
         super().__init__()
         self.msgid = 'ERR_BADCHANNELKEY'
         self.msgparams = {'channel': channel}
+
+class ChanOpsPrivsNeededError(CommandError):
+    '''482 - You\'re not channel operator'''
+    def __init__(self, channel: str):
+        super().__init__()
+        self.msgid = 'ERR_CHANOPRIVSNEEDED'
+        self.msgparams = {'channel': channel}
