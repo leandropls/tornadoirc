@@ -254,7 +254,10 @@ class Channel(object):
             modes.append('s')
         if self.key:
             modes.append('k')
-            params.append(key)
+            params.append(self.key)
+        if self.limit:
+            modes.append('l')
+            params.append(str(self.limit))
         if modes:
             modes.insert(0, '+')
 
@@ -492,7 +495,9 @@ class Channel(object):
 
     def _make_key(self, value: Optional[str] = None):
         '''Create valid key value from input.'''
-        return value
+        if not value:
+            return value
+        return value.split(' ')[0]
 
     @log_exceptions
     def _mode_chan_value(self, user: 'User', operations: List[Tuple[str, str]],
