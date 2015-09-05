@@ -12,35 +12,36 @@ import re
 
 logger = logging.getLogger('tornado.general')
 
-ModeTuple = namedtuple('ModeTuple', ['author', 'timestamp'])
-UserTuple = namedtuple('UserTuple', ['user', 'operator', 'voice'])
+ModeItem = namedtuple('ModeItem', ['author', 'timestamp'])
+ChanUser = namedtuple('ChanUser', ['user', 'operator', 'voice'])
+ModeAttr = namedtuple('ModeAttr', ['param', 'method'])
 
 class Channel(object):
     '''IRC channel'''
     name = Undefined(str)
     catalog = Undefined('ChannelCatalog')
     topic = Undefined(Optional[str])
-    users = Undefined(LowerCaseDict) # users = {'nick': UserTuple}
+    users = Undefined(LowerCaseDict) # users = {'nick': ChanUser}
     key = Undefined(Optional[str])
     moderated = False
     inviteonly = False
     secret = False
-    banlist = Undefined(Dict[str, ModeTuple])
-    invlist = Undefined(Dict[str, ModeTuple])
-    exclist = Undefined(Dict[str, ModeTuple])
+    banlist = Undefined(Dict[str, ModeItem])
+    invlist = Undefined(Dict[str, ModeItem])
+    exclist = Undefined(Dict[str, ModeItem])
     _limit = Undefined(int)
     _name_regex = re.compile(r'^#\w+$')
     _knownmodes = {
-         'b': {'param': True,  'method': 'mode_ban'},
-         'e': {'param': True,  'method': 'mode_except'},
-         'i': {'param': False, 'method': 'mode_inviteonly'},
-         'k': {'param': True,  'method': 'mode_key'},
-         'l': {'param': True,  'method': 'mode_limit'},
-         'm': {'param': False, 'method': 'mode_moderated'},
-         'I': {'param': True,  'method': 'mode_invite'},
-         'o': {'param': True,  'method': 'mode_operator'},
-         's': {'param': False, 'method': 'mode_secret'},
-         'v': {'param': True,  'method': 'mode_voice'},
+         'b': ModeAttr(param = True,  method = 'mode_ban'),
+         'e': ModeAttr(param = True,  method = 'mode_except'),
+         'i': ModeAttr(param = False, method = 'mode_inviteonly'),
+         'k': ModeAttr(param = True,  method = 'mode_key'),
+         'l': ModeAttr(param = True,  method = 'mode_limit'),
+         'm': ModeAttr(param = False, method = 'mode_moderated'),
+         'I': ModeAttr(param = True,  method = 'mode_invite'),
+         'o': ModeAttr(param = True,  method = 'mode_operator'),
+         's': ModeAttr(param = False, method = 'mode_secret'),
+         'v': ModeAttr(param = True,  method = 'mode_voice'),
     }
     _addrmask_regex = re.compile(
         r'^((?:[\w?*]+$)|(?:[\w?*]+!))?'              # nickmask or nickmask!
@@ -116,7 +117,7 @@ class Channel(object):
 
         # Join user
         operator = len(self.users) == 0
-        self.users[user.nick] = UserTuple(user = user, operator = operator,
+        self.users[user.nick] = ChanUser(user = user, operator = operator,
                                           voice = False)
         user.channels[self.name] = self
         self.broadcast_message('CMD_JOIN',
@@ -286,7 +287,7 @@ class Channel(object):
                 if m == '+' or m == '-':
                     oper = m
                 if m in knownmodes:
-                    param = next(modeiter, '') if knownmodes[m]['param'] else ''
+                    param = next(modeiter, '') if knownmodes[m].param else ''
                     mlist.append((m, oper, param))
 
         operations = {}
@@ -294,8 +295,8 @@ class Channel(object):
             operations.setdefault(m[0], []).append((m[1], m[2]))
 
         for m in operations:
-            if hasattr(self, knownmodes[m]['method']):
-                method = getattr(self, knownmodes[m]['method'])
+            if hasattr(self, knownmodes[m].method):
+                method = getattr(self, knownmodes[m].method)
                 method(user = user, operations = operations[m])
 
     @log_exceptions
@@ -352,7 +353,7 @@ class Channel(object):
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
                 eff_modes.append(char)
                 eff_params.append(param)
-                modelist[param] = ModeTuple(user.address, timestamp)
+                modelist[param] = ModeItem(user.address, timestamp)
                 continue
             if oper == '-' and param in modelist: # MODE #chan -x nick!*@*
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
@@ -409,7 +410,7 @@ class Channel(object):
                 eff_params.append(param)
                 userdict = self.users[param]._asdict()
                 userdict[attrname] = True
-                self.users[param] = UserTuple(**userdict)
+                self.users[param] = ChanUser(**userdict)
                 continue
             if oper == '-' and getattr(target, attrname): # -o nick
                 if oper != lastoper: eff_modes.append(oper); lastoper = oper
@@ -417,7 +418,7 @@ class Channel(object):
                 eff_params.append(param)
                 userdict = self.users[param]._asdict()
                 userdict[attrname] = False
-                self.users[param] = UserTuple(**userdict)
+                self.users[param] = ChanUser(**userdict)
                 continue
         if eff_modes:
             eff_str = '%s %s' % (''.join(eff_modes), ' '.join(eff_params))
