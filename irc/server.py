@@ -27,7 +27,7 @@ class IRCServer(object):
     usermodes = 'aiwroO'
     usermodes_restricted_add = 'aoO'
     usermodes_restricted_rem = 'ar'
-    channelmodes = 'beimIov'
+    channelmodes = 'beiklmIov'
     users = Undefined(dict)
     channels = Undefined(ChannelCatalog)
     router = Undefined(EntityRouter)

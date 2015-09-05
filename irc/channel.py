@@ -3,7 +3,7 @@
 from .util import LowerCaseDict, log_exceptions
 from .exceptions import *
 
-from typing import Undefined, Optional, Tuple, List, Dict
+from typing import Undefined, Optional, Tuple, List, Dict, Callable
 from datetime import datetime
 from fnmatch import fnmatch
 from collections import namedtuple
@@ -29,7 +29,8 @@ class Channel(object):
     banlist = Undefined(Dict[str, ModeItem])
     invlist = Undefined(Dict[str, ModeItem])
     exclist = Undefined(Dict[str, ModeItem])
-    _limit = Undefined(int)
+    limit = Undefined(int)
+    hardlimit = Undefined(int)
     _name_regex = re.compile(r'^#\w+$')
     _knownmodes = {
          'b': ModeAttr(param = True,  method = 'mode_ban'),
@@ -49,15 +50,6 @@ class Channel(object):
         r'([a-zA-Z0-9.*?]+)?$'                        # hostmask
     )
 
-    @property
-    def limit(self):
-        return self._limit
-
-    @limit.setter
-    def limit(self, value):
-        chanlimit = self.catalog.server.settings['chanlimit']
-        self._limit = min(chanlimit, value)
-
     def __init__(self, name: str, catalog: 'ChannelCatalog'):
         chanlen_max = catalog.server.settings['chanlen']
         self.set_name(value = name, chanlen_max = chanlen_max)
@@ -68,7 +60,8 @@ class Channel(object):
         self.banlist = {}
         self.invlist = {}
         self.exclist = {}
-        self._limit = catalog.server.settings['chanlimit']
+        self.limit = None
+        self.hardlimit = catalog.server.settings['chanlimit']
 
     def set_name(self, value: str, chanlen_max: int):
         '''Set channel name. Raise exception if it\'s invalid.'''
@@ -91,11 +84,12 @@ class Channel(object):
             return
 
         # Check password
-        if self.key and key and self.key != key:
+        if self.key and self.key != key:
             raise BadChannelKeyError(channel = self.name)
 
         # Check channel size limit
-        if len(self.users) >= self.limit:
+        limit = self.limit if self.limit != None else self.hardlimit
+        if len(self.users) >= limit:
             raise ChannelIsFullError(channel = self.name)
 
         # Check ban list
@@ -466,6 +460,68 @@ class Channel(object):
                 continue
         if eff_modes:
             eff_str = ''.join(eff_modes)
+            self.broadcast_message('CMD_MODE_CHAN',
+                                   useraddr = user.address,
+                                   channel = self.name,
+                                   modes = eff_str)
+
+    def mode_limit(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +l operations'''
+        self._mode_chan_value(user = user, operations = operations,
+                              attrname = 'limit',
+                              value_maker = self._make_limit,
+                              char = 'l')
+
+    def _make_limit(self, value: Optional[str] = None):
+        '''Create a valid limit value from input.'''
+        try:
+            value = int(value)
+        except:
+            return None
+        if value < 0:
+            return None
+        value = min(self.hardlimit, value)
+        return value
+
+    def mode_key(self, user: 'User', operations: List[Tuple[str, str]]):
+        '''Process MODE +k operations'''
+        self._mode_chan_value(user = user, operations = operations,
+                              attrname = 'key',
+                              value_maker = self._make_key,
+                              char = 'k')
+
+    def _make_key(self, value: Optional[str] = None):
+        '''Create valid key value from input.'''
+        return value
+
+    @log_exceptions
+    def _mode_chan_value(self, user: 'User', operations: List[Tuple[str, str]],
+                        attrname: str, value_maker: Callable, char: str):
+        if user.nick not in self.users:
+            return
+        if not self.users[user.nick].operator:
+            raise ChanOpsPrivsNeededError(channel = self.name)
+
+        eff_modes = []
+        eff_params = []
+        lastoper = None
+        for oper, param in operations:
+            if oper == '+':
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                value = value_maker(param)
+                if not value:
+                    continue
+                eff_modes.append(char)
+                eff_params.append(str(value))
+                setattr(self, attrname, value)
+                continue
+            if oper == '-' and getattr(self, attrname):
+                if oper != lastoper: eff_modes.append(oper); lastoper = oper
+                eff_modes.append(char)
+                setattr(self, attrname, None)
+                continue
+        if eff_modes:
+            eff_str = '%s %s' % (''.join(eff_modes), ' '.join(eff_params))
             self.broadcast_message('CMD_MODE_CHAN',
                                    useraddr = user.address,
                                    channel = self.name,
