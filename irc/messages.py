@@ -12,6 +12,7 @@ messages = {
     'RPL_WHOISUSER':        ':%(servername)s 311 %(target)s %(nick)s %(username)s %(hostname)s * :%(realname)s',
     'RPL_WHOISSERVER':      ':%(servername)s 312 %(target)s %(nick)s %(servername)s :%(serverinfo)s',
     'RPL_ENDOFWHOIS':       ':%(servername)s 318 %(target)s %(nick)s :End of WHOIS list',
+    'RPL_WHOISCHANNELS':    ':%(servername)s 319 %(target)s %(nick)s :%(iterator)s',
     'RPL_LIST':             ':%(servername)s 322 %(target)s %(channel)s %(visible)s :%(topic)s',
     'RPL_LISTEND':          ':%(servername)s 323 %(target)s :End of LIST',
     'RPL_CHANNELMODEIS':    ':%(servername)s 324 %(target)s %(channel)s %(modes)s',

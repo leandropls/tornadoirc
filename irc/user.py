@@ -454,6 +454,12 @@ class User(object):
         self.send_message('RPL_WHOISSERVER', nick = user.nick,
                           servername = user.servername,
                           serverinfo = '')
+        if user.channels:
+            chandict = user.channels
+            channels = (chandict[name].name for name in chandict)
+            self.send_message('RPL_WHOISCHANNELS', nick = user.nick,
+                              iterator = channels)
+
         self.send_message('RPL_ENDOFWHOIS', nick = user.nick)
 
     ##
