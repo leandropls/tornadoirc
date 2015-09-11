@@ -3,6 +3,7 @@
 from .user import User
 from .messages import messages
 from .exceptions import *
+from .util import log_exceptions
 
 from tornado.iostream import IOStream
 from tornado.ioloop import IOLoop
@@ -85,6 +86,7 @@ class Connection(object):
             elapsed = format((t1 - t0) * 1e3, '.2f')
             logger.info('%s %sms', name, elapsed)
 
+    @log_exceptions
     def send_message(self, msgid: str, **params):
         '''Send message to connection.'''
         if self.stream.closed():
@@ -94,11 +96,40 @@ class Connection(object):
         params['targetaddr'] = self.user.address if self.user else '*'
         params['ipaddr'] = self.address
 
+        iterator = None
+        if 'iterator' in params:
+            iterator = params['iterator']
+            params['iterator'] = '\aiterator\a'
+
         message = messages[msgid] % params + '\r\n'
         message = message.encode('utf-8')
-        if len(message) > 512:
-            raise TooLongMessageException(length = len(message))
-        self.stream.write(message)
+
+        def stream_write(message):
+            if len(message) > 512:
+                raise TooLongMessageException(length = len(message))
+            self.stream.write(message)
+
+        if not iterator:
+            stream_write(message)
+            return
+
+        values = []
+        valsize = 0
+        for x in iterator:
+            bytex = x.encode('utf-8')
+            bytexsize = len(bytex) + 1
+            if len(message) + valsize + bytexsize > 513: # no trailling space
+                ready = message.replace(b'\aiterator\a', b' '.join(values))
+                values = []
+                valsize = 0
+                stream_write(ready)
+            else:
+                values.append(bytex)
+                valsize += len(bytex) + 1
+        if not values:
+            return
+        ready = message.replace(b'\aiterator\a', b' '.join(values))
+        stream_write(ready)
 
     def register_user(self):
         '''Creates new user and adds it to server user\'s list.'''
