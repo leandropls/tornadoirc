@@ -182,25 +182,11 @@ class Channel(object):
                 nicklist.append('+%s' % users[nick].user.nick)
                 continue
             nicklist.append(users[nick].user.nick)
-        nicklist_str = ' '.join(nicklist)
-        try:
-            user.send_message('RPL_NAMREPLY',
-                              channel = self.name,
-                              chantype = '=',
-                              nicklist = nicklist_str)
-        except TooLongMessageException as e:
-            length = e.length
-            baselen = length - len(nicklist_str.encode('utf-8'))
-            maxnicks = (512 - baselen) // user.server.settings['nicklen']
-            if maxnicks <= 0:
-                raise
-            for i in range(0, len(nicklist) // maxnicks + 1):
-                nicklist_str = ' '.join(nicklist[maxnicks * i:maxnicks * i + maxnicks])
-                user.send_message('RPL_NAMREPLY',
-                                  channel = self.name,
-                                  chantype = '=',
-                                  nicklist = nicklist_str)
-                start = maxnicks
+
+        user.send_message('RPL_NAMREPLY',
+                          channel = self.name,
+                          chantype = '=',
+                          iterator = nicklist)
 
         if not suppress_end:
             user.send_message('RPL_ENDOFNAMES', channel = self.name)

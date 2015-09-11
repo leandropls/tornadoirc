@@ -23,7 +23,7 @@ messages = {
     'RPL_EXCEPTLIST':       ':%(servername)s 348 %(target)s %(channel)s %(mask)s %(author)s %(timestamp)s',
     'RPL_ENDOFEXCEPTLIST':  ':%(servername)s 349 %(target)s %(channel)s :End of channel except list',
     'RPL_VERSION':          ':%(servername)s 351 %(target)s %(version)s %(servername)s :%(comments)s',
-    'RPL_NAMREPLY':         ':%(servername)s 353 %(target)s %(chantype)s %(channel)s :%(nicklist)s',
+    'RPL_NAMREPLY':         ':%(servername)s 353 %(target)s %(chantype)s %(channel)s :%(iterator)s',
     'RPL_ENDOFNAMES':       ':%(servername)s 366 %(target)s %(channel)s :End of NAMES list',
     'RPL_BANLIST':          ':%(servername)s 367 %(target)s %(channel)s %(mask)s %(author)s %(timestamp)s',
     'RPL_ENDOFBANLIST':     ':%(servername)s 368 %(target)s %(channel)s :End of channel ban list',
